@@ -1,0 +1,35 @@
+{
+  "nome": "COMPANHEIRO",
+  "ordem": 2,
+  "requisitos": [
+    { "categoria": "I - Geral", "descricao": "Ter, no mínimo, 11 anos de idade." },
+    { "categoria": "I - Geral", "descricao": "Ser membro ativo do Clube de Desbravadores." },
+    { "categoria": "I - Geral", "descricao": "Ilustrar de forma criativa o significado do Voto dos Desbravadores." },
+    { "categoria": "I - Geral", "descricao": "Ler o livro do Clube do Livro Juvenil do ano em curso e escrever um parágrafo sobre o que mais chamou a atenção." },
+    { "categoria": "I - Geral", "descricao": "Ler o livro \"Um simples lanche\"." },
+    { "categoria": "I - Geral", "descricao": "Participar ativamente da classe bíblica do seu clube." },
+
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Memorizar e demonstrar conhecimento dos 10 Mandamentos e dos 27 livros do Novo Testamento; demonstrar habilidade para encontrar qualquer livro do NT." },
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Ler e explicar: Isa. 41:9-10; Heb. 13:5; Prov. 22:6; I João 1:9; Salmo 8." },
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Leitura bíblica conforme lista fornecida (Levítico, Números, Deuteronômio, Josué, Juízes, Rute, 1 Samuel, 2 Samuel)." },
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Em consulta com o conselheiro escolher um tema (parábola, milagre, sermão da montanha, sermão sobre a Segunda Vinda) e demonstrar conhecimento via troca de ideias, atividade de grupo ou redação." },
+
+    { "categoria": "III - Servindo a Outros", "descricao": "Planejar e dedicar pelo menos duas horas servindo a comunidade; dedicar pelo menos cinco horas participando de um projeto que beneficie a comunidade ou igreja." },
+
+    { "categoria": "IV - Desenvolvendo Amizade", "descricao": "Conversar com o conselheiro/unidade sobre como respeitar pessoas de diferentes culturas, raça e sexo." },
+
+    { "categoria": "V - Saúde e Aptidão Física", "descricao": "Memorizar e explicar I Coríntios 9:24-27; conversar com líder sobre aptidão física; aprender sobre prejuízos do cigarro e assinar compromisso de não uso." },
+    { "categoria": "V - Saúde e Aptidão Física", "descricao": "Completar uma das especialidades: Natação Principiante II ou Acampamento II." },
+
+    { "categoria": "VI - Organização e Liderança", "descricao": "Dirigir/colaborar em meditação criativa para a unidade; ajudar no planejamento de excursão ou acampamento com ao menos um pernoite." },
+
+    { "categoria": "VII - Estudo da Natureza", "descricao": "Participar de jogos da natureza ou caminhada ecológica por uma hora; completar duas especialidades entre Anfíbios, Aves, Aves domésticas, Pecuária, Répteis, Moluscos, Árvores, Arbustos; manter diário de criação por sete dias." },
+
+    { "categoria": "VIII - Arte de Acampar", "descricao": "Descobrir pontos cardeais sem bússola e desenhar Rosa dos Ventos; participar de acampamento de fim de semana e relatar impressões; aprender/recapitular nós listados." },
+
+    { "categoria": "IX - Estilo de Vida", "descricao": "Completar uma especialidade não realizada anteriormente em Artes e Habilidades Manuais." },
+
+    { "categoria": "Classe Avançada - Companheiro de Excursionismo", "descricao": "Aprender e demonstrar composição, significado e uso correto da Bandeira Nacional; ler primeira visão de Ellen White e discutir; participar de atividade missionária com amigo; discutir respeito aos pais e preparar lista." },
+    { "categoria": "Classe Avançada - Companheiro de Excursionismo", "descricao": "Participar de caminhada de 6 km e preparar relatório; escolher atividade de saúde/educação (curso deixar de fumar, filmes, cartaz, exposição, pesquisa) e finalizar com trabalho escrito; identificar 12 aves e 12 árvores nativas; preparar cerimônias e preparar refeição em fogueira; preparar quadro com 15 nós; completar especialidade Excursionismo pedestre com mochila; completar especialidade não realizada anteriormente em Habilidades Domésticas, Ciência e Saúde, Atividades Missionárias ou Atividades Agrícolas." }
+  ]
+}

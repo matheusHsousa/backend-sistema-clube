@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CONSELHEIRO
+  INSTRUTOR
+  ADMIN
+  SECRETARIA
+}
+
+model User {
+  id                 Int                    @id @default(autoincrement())
+  firebaseUid        String                 @unique
+  email              String                 @unique
+  name               String?
+  avatarUrl          String?
+  roles              Role[]
+  unidade            Unidade?
+  classe             Classe?
+  createdAt          DateTime               @default(now())
+  // relacionamentos
+  requisitosMarcados DesbravadorRequisito[]
+  pointsTransactions PointsTransaction[]
+  atrasados          Atrasado[]
+  textosAprovados    TextoBiblico[]         @relation("TextosAprovados")
+}
+
+enum Unidade {
+  DA
+  ASER
+  MANASSES
+  JUDA
+  BENJAMIN
+  RUBEN
+}
+
+enum Classe {
+  AMIGO
+  COMPANHEIRO
+  PESQUISADOR
+  PIONEIRO
+  EXCURSIONISTA
+  GUIA
+}
+
+enum TransactionType {
+  ADJUST
+  AUDIT
+  EDIT
+}
+
+model Desbravador {
+  id         Int                    @id @default(autoincrement())
+  name       String
+  birthDate  DateTime?
+  unidade    Unidade
+  classe     Classe
+  createdAt  DateTime               @default(now())
+  updatedAt  DateTime               @updatedAt
+  // progresso / requisitos cumpridos por este desbravador
+  requisitos DesbravadorRequisito[]
+  points     Points?
+  atrasados  Atrasado[]
+}
+
+model ClasseEntity {
+  id         Int               @id @default(autoincrement())
+  nome       String            @unique
+  ordem      Int?
+  requisitos ClasseRequisito[]
+}
+
+model ClasseRequisito {
+  id         Int     @id @default(autoincrement())
+  classeId   Int
+  categoria  String?
+  descricao  String
+  tipo       String  @default("CHECK")
+  grupoOpcao Int?
+  ordem      Int?
+
+  classe    ClasseEntity           @relation(fields: [classeId], references: [id])
+  progresso DesbravadorRequisito[]
+}
+
+model DesbravadorRequisito {
+  id            Int      @id @default(autoincrement())
+  desbravadorId Int
+  requisitoId   Int
+  instrutorId   Int?
+  data          DateTime @default(now())
+  observacao    String?
+  concluido     Boolean  @default(true)
+
+  desbravador Desbravador     @relation(fields: [desbravadorId], references: [id])
+  requisito   ClasseRequisito @relation(fields: [requisitoId], references: [id])
+  instrutor   User?           @relation(fields: [instrutorId], references: [id])
+}
+
+model Points {
+  id            Int      @id @default(autoincrement())
+  desbravadorId Int      @unique
+  total         Int      @default(0)
+  updatedAt     DateTime @updatedAt
+
+  desbravador  Desbravador         @relation(fields: [desbravadorId], references: [id])
+  transactions PointsTransaction[]
+}
+
+model PointsTransaction {
+  id        Int             @id @default(autoincrement())
+  pointsId  Int
+  amount    Int
+  type      TransactionType @default(ADJUST)
+  reason    String?
+  authorId  Int?
+  createdAt DateTime        @default(now())
+
+  points Points @relation(fields: [pointsId], references: [id])
+  author User?  @relation(fields: [authorId], references: [id])
+}
+
+model Atrasado {
+  id            Int      @id @default(autoincrement())
+  userId        Int?
+  desbravadorId Int?
+  data          DateTime @default(now())
+  observacao    String?
+
+  user         User?        @relation(fields: [userId], references: [id])
+  desbravador  Desbravador? @relation(fields: [desbravadorId], references: [id])
+  textosBiblicos TextoBiblico[]
+}
+
+model TextoBiblico {
+  id            Int      @id @default(autoincrement())
+  atrasadoId    Int
+  imagemUrl     String
+  aprovado      Boolean  @default(false)
+  dataEnvio     DateTime @default(now())
+  dataAprovacao DateTime?
+  aprovadorId   Int?
+
+  atrasado  Atrasado @relation(fields: [atrasadoId], references: [id], onDelete: Cascade)
+  aprovador User?    @relation("TextosAprovados", fields: [aprovadorId], references: [id])
+}

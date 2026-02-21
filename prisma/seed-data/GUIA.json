@@ -1,0 +1,47 @@
+{
+  "nome": "GUIA",
+  "ordem": 6,
+  "requisitos": [
+    { "categoria": "I - Geral", "descricao": "Ter, no mínimo, 15 anos de idade." },
+    { "categoria": "I - Geral", "descricao": "Ser membro ativo do clube de Desbravadores." },
+    { "categoria": "I - Geral", "descricao": "Memorizar e explicar o Voto de Fidelidade à Bíblia." },
+    { "categoria": "I - Geral", "descricao": "Ler o livro do Clube de Leitura Juvenil do ano em curso e resumi-lo em uma página." },
+    { "categoria": "I - Geral", "descricao": "Ler o livro \"O livro amargo\"." },
+
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Memorizar e demonstrar o seu conhecimento: 3 Mensagens Angélicas (Apocalipse 14:6-12)." },
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Memorizar e demonstrar o conhecimento das 7 Igrejas do Apocalipse." },
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Conhecer as Pedras Preciosas: os 12 fundamentos da Nova Jerusalém." },
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Ler e explicar os versos: I Cor. 13; II Cron. 7:14; Apoc. 22:18-20; II Tim. 4:6-7; Rom. 8:38-39; Mateus 6:33-34." },
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Descrever os dons espirituais mencionados por Paulo (Coríntios, Efésios, Filipenses) e explicar seu propósito para a igreja." },
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Estudar a estrutura e serviço do santuário no Antigo Testamento e relacionar com o ministério pessoal de Jesus e a cruz." },
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Ler e resumir três histórias de pioneiros adventistas e apresentar essas histórias na reunião do clube, no culto JA ou na Escola Sabatina." },
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Leitura bíblica: Atos 9:1-31,9:32-43,10-28; Romanos 12-14; 1 Coríntios 13; 2 Coríntios 5:11-21,11:16-33,12:1-10; Gálatas 5:16-26,6:1-10; Efésios 5:1-21,6; Filipenses 4; Colossenses 3; 1 Tessalonicenses 4:13-18,5; 2 Tessalonicenses 2,3; 1 Timóteo 4:6-16,5:1-16,6:11-21; 2 Timóteo 2,3; Filemom; Hebreus 11; Tiago 1,3,5:7-20; 1 Pedro 1,5:1-11; 2 Pedro 3; 1 João 2-5; Judas 1:17-25; Apocalipse 1,2,3,7:9-17,12,13,14,19,20,21." },
+
+    { "categoria": "III - Servindo a Outros", "descricao": "Ajudar a organizar e participar em uma das seguintes atividades: visitar uma pessoa doente; adotar uma pessoa ou família em necessidade e ajudá-los; desenvolver um projeto aprovado pelo líder." },
+    { "categoria": "III - Servindo a Outros", "descricao": "Discutir com sua unidade os métodos de evangelismo pessoal e colocar alguns princípios em prática." },
+
+    { "categoria": "IV - Desenvolvendo Amizade", "descricao": "Assistir a uma palestra ou aula e examinar atitudes em relação a dois dos seguintes temas: escolha profissional; relacionamento com os pais; escolha da pessoa certa para namorar; o plano de Deus para o sexo." },
+
+    { "categoria": "V - Saúde e Aptidão Física", "descricao": "Fazer uma apresentação para alunos do ensino fundamental sobre os oito remédios naturais dados por Deus." },
+    { "categoria": "V - Saúde e Aptidão Física", "descricao": "Completar uma das seguintes atividades: escrever uma poesia/artigo sobre saúde para divulgação; organizar/participar de uma corrida ou atividade similar apresentando um programa de treinamento; ler páginas 102-125 do livro 'Temperança' e selecionar 10 textos; completar a especialidade de Nutrição ou liderar a especialidade de Cultura Física." },
+
+    { "categoria": "VI - Organização e Liderança", "descricao": "Preparar um organograma da estrutura administrativa da Igreja Adventista na sua Divisão." },
+    { "categoria": "VI - Organização e Liderança", "descricao": "Participar de um dos itens: curso para conselheiros; convenção de liderança; 2 reuniões de diretoria do clube; planejar e ensinar no mínimo dois requisitos de uma especialidade para um grupo de desbravadores." },
+
+    { "categoria": "VII - Estudo da Natureza", "descricao": "Ler o capítulo 7 do livro 'O Desejado de Todas as Nações' sobre a infância de Jesus e apresentar as lições para um grupo, clube ou unidade." },
+    { "categoria": "VII - Estudo da Natureza", "descricao": "Completar uma das especialidades: Ecologia ou Conservação Ambiental." },
+
+    { "categoria": "VIII - Arte de Acampar", "descricao": "Participar com sua unidade de um acampamento com estrutura de pioneiria, planejando o evento e o que será levado." },
+    { "categoria": "VIII - Arte de Acampar", "descricao": "Planejar, preparar e cozinhar três refeições ao ar livre." },
+    { "categoria": "VIII - Arte de Acampar", "descricao": "Construir e utilizar um móvel de acampamento em tamanho real, com nós e amarras." },
+    { "categoria": "VIII - Arte de Acampar", "descricao": "Completar uma especialidade não realizada anteriormente nas áreas: Aquática, Esportes, Atividades Recreativas, Vida Campestre." },
+
+    { "categoria": "IX - Estilo de Vida", "descricao": "Completar uma especialidade não realizada anteriormente em: Atividades agrícolas; Ciência e saúde; Habilidades domésticas; Atividades profissionais." },
+
+    { "categoria": "Classe Avançada - Guia de Exploração", "descricao": "Completar a especialidade de Mordomia; ler 'O maior discurso de Cristo' e escrever uma página sobre o efeito da leitura." },
+    { "categoria": "Classe Avançada - Guia de Exploração", "descricao": "Trazer dois amigos para assistir a duas diferentes reuniões da igreja; ajudar a planejar e participar em pelo menos quatro domingos em uma série de evangelismo jovem; escrever uma página ou apresentar palestra sobre como influenciar amigos para Cristo." },
+    { "categoria": "Classe Avançada - Guia de Exploração", "descricao": "Observar durante dois meses o trabalho dos diáconos e apresentar relatório detalhado (cuidado da propriedade, cerimônia de lava-pés, cerimônia de batismo, recolhimento de dízimos e ofertas)." },
+    { "categoria": "Classe Avançada - Guia de Exploração", "descricao": "Completar o mestrado em Vida Campestre; projetar três tipos diferentes de abrigo, explicar seu uso e utilizar um deles em acampamento." },
+    { "categoria": "Classe Avançada - Guia de Exploração", "descricao": "Assistir um seminário ou apresentar palestra sobre dois dos temas: Aborto; AIDS; Violência; Drogas; completar especialidade de Orçamento Familiar; completar especialidade de Liderança Campestre." }
+  ]
+}

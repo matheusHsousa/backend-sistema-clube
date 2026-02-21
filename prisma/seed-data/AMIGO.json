@@ -1,0 +1,35 @@
+{
+  "nome": "AMIGO",
+  "ordem": 1,
+  "requisitos": [
+    { "categoria": "I - Geral", "descricao": "Ter, no mínimo, 10 anos de idade." },
+    { "categoria": "I - Geral", "descricao": "Ser membro ativo do Clube de Desbravadores." },
+    { "categoria": "I - Geral", "descricao": "Memorizar e explicar o Voto e a Lei do Desbravador." },
+    { "categoria": "I - Geral", "descricao": "Ler o livro do Clube do livro Juvenil do ano em curso." },
+    { "categoria": "I - Geral", "descricao": "Ler o livro \"Vaso de barro\"." },
+    { "categoria": "I - Geral", "descricao": "Participar ativamente da classe bíblica do seu clube." },
+
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Memorizar e demonstrar conhecimento da Criação (o que Deus criou em cada dia)." },
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Memorizar as 10 pragas que caíram sobre o Egito." },
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Memorizar as 12 Tribos de Israel e saber nomear cada uma." },
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Conhecer os 39 livros do Antigo Testamento e demonstrar habilidade para encontrá-los." },
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Ler e explicar: João 3:16; Efésios 6:1-3; II Timóteo 3:16; Salmo 1." },
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Leitura bíblica: Gênesis (capítulos listados), Êxodo (capítulos listados) conforme guia do requisito." },
+
+    { "categoria": "III - Servindo a Outros", "descricao": "Dedicar duas horas ajudando alguém em sua comunidade através de duas atividades: visitar alguém que precisa de amizade e orar; oferecer alimento; participar de projeto ecológico/educativo; escrever redação sobre como ser um bom cidadão." },
+
+    { "categoria": "IV - Desenvolvendo Amizade", "descricao": "Mencionar dez qualidades de um bom amigo e apresentar quatro situações onde praticou a Regra Áurea; saber cantar o Hino Nacional e conhecer sua história (autor da letra e da música)." },
+
+    { "categoria": "V - Saúde e Aptidão Física", "descricao": "Completar uma das especialidades: Natação principiante I, Cultura física, Nós e amarras, Segurança básica na água; explicar princípios de temperança a partir da experiência de Daniel; memorizar e explicar Daniel 1:8; escrever compromisso pessoal de seguir estilo de vida saudável; aprender princípios de dieta saudável e preparar quadro com grupos alimentares." },
+
+    { "categoria": "VI - Organização e Liderança", "descricao": "Acompanhar processo de planejamento até a execução de uma caminhada de 5 quilômetros." },
+
+    { "categoria": "VII - Estudo da Natureza", "descricao": "Completar uma das especialidades: Felinos, Cães, Mamíferos, Sementes, Aves de Estimação; aprender purificação de água e montar uma barraca." },
+
+    { "categoria": "VIII - Arte de Acampar", "descricao": "Demonstrar cuidado com corda e executar nós listados; completar especialidade Acampamento I; apresentar 10 regras para caminhada; aprender sinais para seguir pista e preparar/seguir pista de no mínimo 10 sinais." },
+
+    { "categoria": "IX - Estilo de Vida", "descricao": "Completar uma especialidade na área de Artes e Habilidades Manuais." },
+
+    { "categoria": "Classe Avançada - Amigo da Natureza", "descricao": "Memorizar/cantar/tocar o Hino dos Desbravadores e conhecer sua história; escolher personagem do AT e discutir amor e cuidado de Deus; levar pelo menos dois amigos não adventistas à Escola Sabatina ou Clube; conhecer princípios de higiene e boas maneiras; completar especialidade Arte de acampar; identificar 10 flores e 10 insetos; acender fogueira com um fósforo; usar ferramentas com segurança; escolher especialidade em Atividades missionárias ou agrícolas." }
+  ]
+}

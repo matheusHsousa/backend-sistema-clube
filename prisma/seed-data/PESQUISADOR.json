@@ -1,0 +1,35 @@
+{
+  "nome": "PESQUISADOR",
+  "ordem": 3,
+  "requisitos": [
+    { "categoria": "I - Geral", "descricao": "Ter, no mínimo, 12 anos de idade." },
+    { "categoria": "I - Geral", "descricao": "Ser membro ativo do Clube de Desbravadores." },
+    { "categoria": "I - Geral", "descricao": "Demonstrar compreensão do significado da Lei do Desbravador através de representação, debate ou redação." },
+    { "categoria": "I - Geral", "descricao": "Ler o livro do Clube do Livro Juvenil do ano e escrever dois parágrafos sobre o que mais chamou atenção." },
+    { "categoria": "I - Geral", "descricao": "Ler o livro \"Além da Magia\"." },
+    { "categoria": "I - Geral", "descricao": "Participar ativamente da classe bíblica do seu clube." },
+
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Memorizar e demonstrar conhecimento de Levítico 11 (regras de alimentos comestíveis e não comestíveis)." },
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Ler e explicar: Ecles. 12:13-14; Rom. 6:23; Apoc. 1:3; Isa. 43:1-2; Salmo 51:10; Salmo 16." },
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Leitura bíblica extensa (1 Reis, 2 Reis, 2 Crônicas, Esdras, Neemias, Ester, Jó, Salmos, Provérbios, Eclesiastes) conforme lista fornecida." },
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Escolher uma história (Nicodemos, a mulher samaritana, o bom samaritano, o filho pródigo, Zaqueu) e demonstrar compreensão via grupo, mensagem, cartazes/maquete ou poesia/hino." },
+
+    { "categoria": "III - Servindo a Outros", "descricao": "Conhecer projetos comunitários locais e participar de pelo menos um com sua unidade; participar em três atividades missionárias da igreja." },
+
+    { "categoria": "IV - Desenvolvendo Amizade", "descricao": "Participar de debate/representação sobre pressão de grupo e identificar sua influência; visitar órgão público e mapear como o clube pode ajudar a comunidade." },
+
+    { "categoria": "V - Saúde e Aptidão Física", "descricao": "Escolher atividade e escrever texto pessoal sobre estilo de vida livre do álcool; participar de discussão/assistir vídeo e refletir." },
+
+    { "categoria": "VI - Organização e Liderança", "descricao": "Dirigir cerimônia de abertura do clube ou programa de Escola Sabatina; ajudar a organizar a classe bíblica do clube." },
+
+    { "categoria": "VII - Estudo da Natureza", "descricao": "Identificar a estrela Alfa da constelação do Centauro e a constelação de Órion; completar uma das especialidades: Astronomia, Cactos, Climatologia, Flores, Rastreio de animais." },
+
+    { "categoria": "VIII - Arte de Acampar", "descricao": "Apresentar seis segredos para um bom acampamento; participar de acampamento de final de semana e cozinhar duas refeições; completar Acampamento III e Primeiros Socorros - básico; aprender a usar bússola/GPS e demonstrar habilidade." },
+
+    { "categoria": "IX - Estilo de Vida", "descricao": "Completar uma especialidade não realizada anteriormente em Artes e Habilidades Manuais." },
+
+    { "categoria": "Classe Avançada - Pesquisador de Campo e Bosque", "descricao": "Conhecer e usar adequadamente a Bandeira dos Desbravadores, bandeirim de unidade e comandos de ordem unida; ler história de J. N. Andrews ou pioneiro local e discutir missão." },
+    { "categoria": "Classe Avançada - Pesquisador de Campo e Bosque", "descricao": "Convidar pessoa para Clube/Classe Bíblica/Pequeno Grupo; completar especialidades como Asseio e Cortesia Cristã ou Vida Familiar; participar de caminhada de 10 km e listar equipamentos; organizar evento especial (Investidura, Admissão de Lenço, Dia do Desbravador)." },
+    { "categoria": "Classe Avançada - Pesquisador de Campo e Bosque", "descricao": "Identificar 6 pegadas e fazer modelos; aprender 4 amarras básicas e construir móvel de acampamento; planejar cardápio vegetariano para acampamento de 3 dias; comunicação por semáforo, Morse, LIBRAS, Braile; completar duas especialidades em Habilidades Domésticas, Ciência e Saúde, Atividades Missionárias ou Agrícolas." }
+  ]
+}

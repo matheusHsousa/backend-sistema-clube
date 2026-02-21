@@ -1,0 +1,33 @@
+{
+  "nome": "EXCURSIONISTA",
+  "ordem": 5,
+  "requisitos": [
+    { "categoria": "I - Geral", "descricao": "Ter, no mínimo, 14 anos de idade." },
+    { "categoria": "I - Geral", "descricao": "Ser membro ativo do Clube de Desbravadores." },
+    { "categoria": "I - Geral", "descricao": "Memorizar e explicar o significado do Objetivo JA." },
+    { "categoria": "I - Geral", "descricao": "Ler o livro do Clube do Livro Juvenil do ano em curso e resumi-lo em uma página." },
+    { "categoria": "I - Geral", "descricao": "Ler o livro \"O Fim do Começo\"." },
+
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Memorizar e demonstrar conhecimento dos 12 Apóstolos e dos Frutos do Espírito." },
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Ler e explicar: Rom. 8:28; Apoc. 21:1-3; II Ped. 1:20-21; I João 2:14; II Cron. 20:20; Salmo 46." },
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Estudar a pessoa do Espírito Santo e seu papel no crescimento espiritual; estudar eventos finais e a Segunda Vinda; investigar o significado da observância do sábado." },
+    { "categoria": "II - Descoberta Espiritual", "descricao": "Leitura bíblica: Mateus 24-25,26:1-35,26:36-75,27:1-66,28; Marcos 7,9,10,11,12,16; Lucas 1:4-25,1:26-66,2:21-38,2:39-52,7:18-28,8,10:1-37,10:38-42,11:1-13,12-17,17-24; João 1-21; Atos 1-8." },
+
+    { "categoria": "III - Servindo a Outros", "descricao": "Convidar um amigo para atividade social da igreja/Associação; participar de projeto comunitário desde o planejamento até a execução; discutir relacionamentos com vizinhos, escola e atividades sociais." },
+
+    { "categoria": "IV - Desenvolvendo Amizade", "descricao": "Examinar atitudes em dois temas: auto-estima; relacionamento familiar; finanças pessoais; pressão de grupo; preparar lista de 5 sugestões de atividades recreativas e colaborar na organização de uma delas." },
+
+    { "categoria": "V - Saúde e Aptidão Física", "descricao": "Completar a especialidade de Temperança." },
+
+    { "categoria": "VI - Organização e Liderança", "descricao": "Preparar organograma da igreja local e relacionar funções; participar em dois programas envolvendo departamentos; completar a especialidade Aventuras com Cristo." },
+
+    { "categoria": "VII - Estudo da Natureza", "descricao": "Recapitular a história de Nicodemos e relacioná-la ao ciclo de vida da lagarta/borboleta; completar uma especialidade de Estudos da Natureza não realizada anteriormente." },
+
+    { "categoria": "VIII - Arte de Acampar", "descricao": "Com grupo (>=4) e um conselheiro adulto, andar pelo menos 20 km em área rural incluindo uma noite ao ar livre; planejar expedição e documentar observações; completar especialidade de Pioneirias." },
+
+    { "categoria": "IX - Estilo de Vida", "descricao": "Completar uma especialidade não realizada anteriormente em: Atividades missionárias, agrícolas, Ciência e saúde ou Habilidades domésticas." },
+
+    { "categoria": "Classe Avançada - Excursionista na Mata", "descricao": "Apresentação sobre respeito à Lei de Deus e autoridades; acompanhar pastor em visita missionária; completar especialidade Testemunho Juvenil; apresentar 5 atividades na natureza para Sábado à tarde; construir móveis de acampamento com a unidade." },
+    { "categoria": "Classe Avançada - Excursionista na Mata", "descricao": "Demonstrar conhecimento sobre plantas comestíveis e procedimentos para ferimentos por animal peçonhento; demonstrar técnicas para percorrer trilhas em diferentes terrenos; completar especialidade Vida Silvestre e Ordem Unida." }
+  ]
+}
