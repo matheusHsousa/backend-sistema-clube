@@ -1,0 +1,52 @@
+name: Backend CI / Deploy to Fly
+
+on:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Prisma generate
+        working-directory: backend
+        run: npm run prisma:generate
+
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Run migrations and seed
+        if: ${{ secrets.DATABASE_URL != '' }}
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT" > serviceAccountKey.json
+          npx prisma migrate deploy --schema=prisma/schema.prisma
+          npm run seed || true
+
+      - name: Set up Flyctl
+        uses: superfly/flyctl-actions@1.6
+        with:
+          version: '0.1.20'
+
+      - name: Deploy to Fly
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          cd backend
+          flyctl deploy --config fly.toml --remote-only --app ${{ secrets.FLY_APP_NAME }}
