@@ -15,4 +15,5 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 ENV NODE_ENV=production
 EXPOSE 8080
-CMD ["node", "dist/main.js"]
+ENTRYPOINT ["/bin/sh", "-c"]
+CMD ["if [ -n \"$FIREBASE_SERVICE_ACCOUNT\" ]; then printf '%s' \"$FIREBASE_SERVICE_ACCOUNT\" > /app/serviceAccountKey.json; fi; node dist/main.js"]
