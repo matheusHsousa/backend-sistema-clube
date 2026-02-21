@@ -17,28 +17,19 @@ jobs:
           node-version: '18'
 
       - name: Install dependencies
-        working-directory: backend
-        run: npm ci
-        - name: Install dependencies
-          run: |
-            cd backend
-            npm ci
+        run: |
+          cd backend
+          npm ci
 
       - name: Prisma generate
-        working-directory: backend
-        run: npm run prisma:generate
-        - name: Prisma generate
-          run: |
-            cd backend
-            npm run prisma:generate
+        run: |
+          cd backend
+          npm run prisma:generate
 
       - name: Build backend
-        working-directory: backend
-        run: npm run build
-        - name: Build backend
-          run: |
-            cd backend
-            npm run build
+        run: |
+          cd backend
+          npm run build
 
       - name: Run migrations and seed
         working-directory: backend
@@ -55,7 +46,7 @@ jobs:
           fi
 
       - name: Set up Flyctl
-          uses: superfly/flyctl-actions@v1
+        uses: superfly/flyctl-actions@v1
         with:
           version: '0.1.20'
 
