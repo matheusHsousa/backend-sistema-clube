@@ -14,5 +14,5 @@ RUN npm ci --production
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 ENV NODE_ENV=production
-EXPOSE 3000
-CMD ["node", "dist/main"]
+EXPOSE 8080
+CMD ["node", "dist/main.js"]
