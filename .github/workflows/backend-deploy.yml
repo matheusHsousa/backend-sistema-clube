@@ -29,15 +29,18 @@ jobs:
         run: npm run build
 
       - name: Run migrations and seed
-        if: ${{ secrets.DATABASE_URL != '' }}
         working-directory: backend
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
-          echo "$FIREBASE_SERVICE_ACCOUNT" > serviceAccountKey.json
-          npx prisma migrate deploy --schema=prisma/schema.prisma
-          npm run seed || true
+          if [ -n "$DATABASE_URL" ]; then
+            echo "$FIREBASE_SERVICE_ACCOUNT" > serviceAccountKey.json
+            npx prisma migrate deploy --schema=prisma/schema.prisma
+            npm run seed || true
+          else
+            echo "DATABASE_URL not set; skipping migrations/seed"
+          fi
 
       - name: Set up Flyctl
         uses: superfly/flyctl-actions@1.6
