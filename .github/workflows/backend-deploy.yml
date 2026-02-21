@@ -25,17 +25,30 @@ jobs:
       - name: Build backend
         run: npm run build
 
-      - name: Run migrations and seed
+      - name: Test DB connectivity and run migrations
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
-          if [ -n "$DATABASE_URL" ]; then
+          apt-get update && apt-get install -y netcat
+          if [ -z "$DATABASE_URL" ]; then
+            echo "DATABASE_URL not set; skipping migrations/seed"
+            exit 0
+          fi
+
+          # extract host and port for quick TCP check
+          DB_HOST=$(echo "$DATABASE_URL" | sed -E 's#.*@([^:/]+)(:([0-9]+))?/.*#\1#')
+          DB_PORT=$(echo "$DATABASE_URL" | sed -E 's#.*@[^:/]+:([0-9]+)/.*#\1#')
+          if [ -z "$DB_PORT" ]; then DB_PORT=5432; fi
+
+          echo "Checking TCP connectivity to $DB_HOST:$DB_PORT"
+          if nc -zv "$DB_HOST" "$DB_PORT"; then
+            echo "DB reachable — running migrations"
             echo "$FIREBASE_SERVICE_ACCOUNT" > serviceAccountKey.json
             npx prisma migrate deploy --schema=prisma/schema.prisma
             npm run seed || true
           else
-            echo "DATABASE_URL not set; skipping migrations/seed"
+            echo "DB unreachable at $DB_HOST:$DB_PORT — skipping migrations/seed"
           fi
 
       - name: Set up Flyctl
