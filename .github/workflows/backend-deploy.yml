@@ -23,9 +23,15 @@ jobs:
         run: npm ci
 
       - name: Prisma generate
+        env:
+          PRISMA_CLIENT_ENGINE_TYPE: dataproxy
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm run prisma:generate
 
       - name: Build backend
+        env:
+          PRISMA_CLIENT_ENGINE_TYPE: dataproxy
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm run build
 
       - name: Test DB connectivity and run migrations
@@ -68,7 +74,8 @@ jobs:
           vercel-args: '--prod --confirm'
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          DISABLE_PRISMA: 'true'
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PRISMA_CLIENT_ENGINE_TYPE: dataproxy
 
       - name: Dump Vercel logs on failure
         if: failure()
