@@ -18,6 +18,9 @@ COPY package*.json ./
 RUN npm ci --production
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
+# Copy generated Prisma client from builder (required at runtime)
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
 ENV NODE_ENV=production
 EXPOSE 8080
 ENTRYPOINT ["/bin/sh", "-c"]
