@@ -1,9 +1,12 @@
-FROM node:18-alpine AS builder
+FROM node:18-bullseye-slim AS builder
 WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma
 COPY tsconfig*.json ./
-RUN npm ci
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates libssl1.1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && npm ci
 COPY . .
 RUN npm run build && \
 		if [ ! -f dist/main.js ]; then \
@@ -12,10 +15,13 @@ RUN npm run build && \
 			exit 1; \
 		fi
 
-FROM node:18-alpine
+FROM node:18-bullseye-slim
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --production
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends ca-certificates libssl1.1 \
+	&& rm -rf /var/lib/apt/lists/* \
+	&& npm ci --production
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 # Copy generated Prisma client from builder (required at runtime)
