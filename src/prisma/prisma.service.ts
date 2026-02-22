@@ -8,6 +8,12 @@ function delay(ms: number) {
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit {
   async onModuleInit() {
+    // Se a variável de ambiente estiver ativa, não tente conectar o Prisma
+    if (process.env.DISABLE_PRISMA === 'true' || !process.env.DATABASE_URL) {
+      // eslint-disable-next-line no-console
+      console.log('Prisma disabled by DISABLE_PRISMA or missing DATABASE_URL — skipping connection');
+      return;
+    }
     const maxAttempts = 5;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
