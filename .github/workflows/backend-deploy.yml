@@ -97,8 +97,8 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
           export PATH="$HOME/.fly/bin:$PATH"
-          echo "Deploy failed — fetching last 10 minutes of logs for debugging"
-          flyctl logs --app ${{ secrets.FLY_APP_NAME }} --since 10m || true
+          echo "Deploy failed — fetching recent logs for debugging"
+          flyctl logs --app ${{ secrets.FLY_APP_NAME }} --no-tail || true
           # Exit non-zero so the job still fails after printing logs
           exit 1
         shell: bash
