@@ -54,51 +54,25 @@ jobs:
             echo "DB unreachable at $DB_HOST:$DB_PORT — skipping migrations/seed"
           fi
 
-      - name: Install flyctl
+      - name: Install Vercel CLI
         run: |
-          curl -L https://fly.io/install.sh | sh
-          echo "$HOME/.fly/bin" >> $GITHUB_PATH
-          $HOME/.fly/bin/flyctl version
-        shell: bash
+          npm install -g vercel
 
-      - name: Flyctl debug (auth + apps)
+      - name: Vercel deploy (via action)
+        uses: amondnet/vercel-action@v20
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: .
+          vercel-args: '--prod --confirm'
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: |
-          export PATH="$HOME/.fly/bin:$PATH"
-          flyctl version
-          flyctl auth whoami || true
-          flyctl apps list || true
-        shell: bash
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          DISABLE_PRISMA: 'true'
 
-      - name: Flyctl debug (verify token and app)
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Dump Vercel logs on failure
+        if: failure()
         run: |
-          export PATH="$HOME/.fly/bin:$PATH"
-          flyctl version
-          flyctl auth whoami || true
-          flyctl apps list || true
-          flyctl info ${{ secrets.FLY_APP_NAME }} || flyctl status --app ${{ secrets.FLY_APP_NAME }} || true
-        shell: bash
-
-      - name: Deploy to Fly
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: |
-          export PATH="$HOME/.fly/bin:$PATH"
-          set -o pipefail
-          flyctl deploy --config fly.toml --app ${{ secrets.FLY_APP_NAME }} || echo "DEPLOY_FAILED=1" >> $GITHUB_ENV
-        shell: bash
-
-      - name: Dump Fly logs on failure
-        if: env.DEPLOY_FAILED == '1'
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: |
-          export PATH="$HOME/.fly/bin:$PATH"
           echo "Deploy failed — fetching recent logs for debugging"
-          flyctl logs --app ${{ secrets.FLY_APP_NAME }} --no-tail || true
-          # Exit non-zero so the job still fails after printing logs
-          exit 1
-        shell: bash
+          npm install -g vercel
+          vercel logs --token ${{ secrets.VERCEL_TOKEN }} --limit 100 || true
