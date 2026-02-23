@@ -5,9 +5,29 @@ import { ExpressAdapter } from '@nestjs/platform-express';
 import express from 'express';
 import serverless from 'serverless-http';
 
+// Global error handlers to surface crashes in serverless logs
+process.on('uncaughtException', (err) => {
+  // eslint-disable-next-line no-console
+  console.error('uncaughtException', err);
+});
+process.on('unhandledRejection', (reason) => {
+  // eslint-disable-next-line no-console
+  console.error('unhandledRejection', reason);
+});
+
 let cachedHandler: any = null;
 
 async function bootstrap() {
+  // log express version if available
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const ev = require('express/package.json').version;
+    // eslint-disable-next-line no-console
+    console.log('express version=', ev);
+  } catch (e) {
+    // ignore
+  }
+
   const server = express();
   const app = await NestFactory.create(AppModule, new ExpressAdapter(server));
 

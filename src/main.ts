@@ -4,7 +4,27 @@ dotenv.config();
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
+// Global error handlers to surface crashes in serverless logs
+process.on('uncaughtException', (err) => {
+  // eslint-disable-next-line no-console
+  console.error('uncaughtException', err);
+});
+process.on('unhandledRejection', (reason) => {
+  // eslint-disable-next-line no-console
+  console.error('unhandledRejection', reason);
+});
+
 async function bootstrap() {
+  // log express version if available
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const ev = require('express/package.json').version;
+    // eslint-disable-next-line no-console
+    console.log('express version=', ev);
+  } catch (e) {
+    // ignore
+  }
+
   const app = await NestFactory.create(AppModule);
 
   const frontend = (process.env.FRONTEND_URL || 'http://localhost:4200').replace(/\/+$/, '');
