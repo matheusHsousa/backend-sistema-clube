@@ -2,10 +2,17 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { FirebaseService } from '../firebase/firebase.service';
+import * as jwt from 'jsonwebtoken';
 
 @Injectable()
 export class AuthService {
   constructor(private supabase: SupabaseService, private firebaseService: FirebaseService) {}
+
+  generateJwtForUser(user: any) {
+    const secret = process.env.JWT_SECRET || 'dev-secret';
+    const payload = { id: user.id, roles: user.roles || [] };
+    return jwt.sign(payload, secret, { expiresIn: '7d' });
+  }
 
   async validateUser(token: string) {
     try {
