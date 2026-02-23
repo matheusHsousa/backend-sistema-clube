@@ -34,5 +34,14 @@ module.exports = async function handler(req, res) {
 		}
 	}
 
+	// Diagnostic logs to detect recursion/shape in production
+	try {
+		console.log('api/index.js handler invoked', { url: req && req.url, method: req && req.method });
+		console.log('cachedHandler type:', typeof cachedHandler);
+		if (typeof cachedHandler !== 'function') console.log('cachedHandler keys:', Object.keys(cachedHandler || {}));
+	} catch (e) {
+		// ignore logging errors
+	}
+
 	return cachedHandler(req, res);
 };
