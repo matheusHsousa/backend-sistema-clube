@@ -21,4 +21,19 @@ export class SupabaseUploadController {
       throw err;
     }
   }
+
+  @Post('texto')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadTexto(@Body('atrasadoId') atrasadoId: string, @UploadedFile() file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('file is required');
+
+    try {
+      const url = await this.svc.uploadFile('textos-biblicos', file.buffer, file.originalname, file.mimetype, String(atrasadoId || ''));
+      return { url };
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('UploadTexto error:', err);
+      throw err;
+    }
+  }
 }
