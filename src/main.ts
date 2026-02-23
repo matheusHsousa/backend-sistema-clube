@@ -27,21 +27,30 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
 
-  const frontend = (process.env.FRONTEND_URL || 'http://localhost:4200').replace(/\/+$/, '');
   const port = Number(process.env.PORT || 3000);
 
-  // Normaliza e loga a origem do frontend para evitar problemas com barras finais
-  const normalizedFrontend = frontend.replace(/\/+$/, '');
-  // Habilita CORS configurável por env
-  console.log(`FRONTEND_URL (normalized)= ${normalizedFrontend}`);
+  // Ler variáveis de frontend: permite FRONTEND_URL_PROD e FRONTEND_URL_DEV
+  const prodUrl = (process.env.FRONTEND_URL_PROD || '').replace(/\/+$/, '');
+  const devUrl = (process.env.FRONTEND_URL_DEV || process.env.FRONTEND_URL || 'http://localhost:4200').replace(/\/+$/, '');
+
+  // Constrói a lista de origens permitidas (pode conter 1 ou 2 entradas)
+  const allowedOrigins = Array.from(new Set([prodUrl, devUrl].filter(Boolean)));
+
+  console.log(`Allowed CORS origins= ${allowedOrigins.join(',')}`);
+
   app.enableCors({
-    origin: normalizedFrontend,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const normalized = origin.replace(/\/+$/, '');
+      if (allowedOrigins.includes(normalized)) return callback(null, true);
+      return callback(new Error('Not allowed by CORS'));
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
 
   await app.listen(port);
   // eslint-disable-next-line no-console
-  console.log(`Backend listening on port ${port}, CORS origin: ${normalizedFrontend}`);
+  console.log(`Backend listening on port ${port}, CORS origins: ${allowedOrigins.join(',')}`);
 }
 bootstrap();
