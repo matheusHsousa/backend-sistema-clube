@@ -29,7 +29,15 @@ async function bootstrap() {
   }
 
   const server = express();
-  const app = await NestFactory.create(AppModule, new ExpressAdapter(server));
+
+  // Apply JSON body parser manually and avoid Nest registering parser middleware
+  server.use(express.json());
+  server.use(express.urlencoded({ extended: true }));
+
+  // Create Nest app with bodyParser disabled to skip registerParserMiddleware
+  const app = await NestFactory.create(AppModule, new ExpressAdapter(server), {
+    bodyParser: false,
+  });
 
   // Normaliza e loga a origem do frontend para evitar problemas com barras finais
   const frontend = (process.env.FRONTEND_URL || 'http://localhost:4200').replace(/\/+$/, '');
@@ -40,7 +48,12 @@ async function bootstrap() {
     credentials: true,
   });
 
-  await app.init();
+  try {
+    await app.init();
+  } catch (err) {
+    console.error('bootstrap init error', err);
+    throw err;
+  }
   return serverless(server);
 }
 
