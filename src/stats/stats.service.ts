@@ -149,8 +149,9 @@ export class StatsService {
   async adminDesbravadoresUnidadeSemanal(weeks = 12) {
     const { data: desbravadores } = await this.supabase.client.from('desbravador').select('unidade, createdAt').order('createdAt', { ascending: true });
 
-    const unidades = Object.values(Unidade);
-    const totals = unidades.reduce((acc, unidade) => {
+    // Derive units from desbravadores data (Prisma enum removed)
+    const unidades: string[] = Array.from(new Set((desbravadores || []).map((d: any) => String(d.unidade || ''))));
+    const totals = unidades.reduce((acc: Record<string, number>, unidade: string) => {
       acc[unidade] = 0;
       return acc;
     }, {} as Record<string, number>);
@@ -168,7 +169,7 @@ export class StatsService {
 
     // build cumulative counts per sunday
     const rows = sundayPoints.map((sunday) => {
-      const values = unidades.reduce((acc, unidade) => ({ ...acc, [unidade]: 0 }), {} as Record<string, number>);
+      const values = unidades.reduce((acc: Record<string, number>, unidade: string) => ({ ...acc, [unidade]: 0 }), {} as Record<string, number>);
       for (const d of desbravadores || []) {
         if (new Date(d.createdAt) <= sunday) {
           values[d.unidade] = (values[d.unidade] || 0) + 1;
