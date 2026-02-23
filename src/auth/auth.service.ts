@@ -13,8 +13,9 @@ export class AuthService {
       const backendUser = await this.handleUser(decodedToken);
       return backendUser;
     } catch (err) {
-      console.error('❌ Token Firebase inválido', err);
-      return null;
+      console.error('❌ Erro ao validar token Firebase:', err);
+      // Repassa o erro para o guard alcançar logs/response reais
+      throw err;
     }
   }
 
