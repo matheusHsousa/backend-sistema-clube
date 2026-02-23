@@ -89,4 +89,16 @@ export class AuthController {
       return null;
     }
   }
+
+  @Post('logout')
+  async logout(@Res() res: Response) {
+    try {
+      res.clearCookie('auth_token', { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
+      return res.json({ ok: true });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Logout error:', err);
+      return res.status(500).json({ ok: false });
+    }
+  }
 }
