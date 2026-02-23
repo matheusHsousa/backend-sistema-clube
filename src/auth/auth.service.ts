@@ -24,7 +24,7 @@ export class AuthService {
 
     try {
       const { data: existing } = await this.supabase.client
-        .from('User')
+        .from('user')
         .select('*')
         .eq('firebaseUid', firebaseUser.uid)
         .limit(1)
@@ -36,7 +36,7 @@ export class AuthService {
         const classe = (firebaseUser.classe || firebaseUser.claims?.classe) ?? null;
 
         const { data: created, error: createErr } = await this.supabase.client
-          .from('User')
+          .from('user')
           .insert([
             {
               firebaseUid: firebaseUser.uid,
@@ -67,7 +67,7 @@ export class AuthService {
         if (unidade !== undefined) updateData.unidade = unidade;
         if (classe !== undefined) updateData.classe = classe;
         const { data: updated } = await this.supabase.client
-          .from('User')
+          .from('user')
           .update(updateData)
           .eq('id', existing.id)
           .select()

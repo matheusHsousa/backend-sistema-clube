@@ -101,7 +101,7 @@ export class AtrasadosService {
   }
 
   async listarTodosUsuarios() {
-    const { data } = await this.supabase.client.from('User').select('id, name, email, roles').order('name', { ascending: true });
+    const { data } = await this.supabase.client.from('user').select('id, name, email, roles').order('name', { ascending: true });
     return data || [];
   }
 
