@@ -11,7 +11,9 @@ async function bootstrap() {
   const server = express();
   const app = await NestFactory.create(AppModule, new ExpressAdapter(server));
 
-  const frontend = process.env.FRONTEND_URL || 'http://localhost:4200';
+  // Normaliza e loga a origem do frontend para evitar problemas com barras finais
+  const frontend = (process.env.FRONTEND_URL || 'http://localhost:4200').replace(/\/+$/, '');
+  console.log(`FRONTEND_URL (normalized)= ${frontend}`);
   app.enableCors({
     origin: frontend,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
