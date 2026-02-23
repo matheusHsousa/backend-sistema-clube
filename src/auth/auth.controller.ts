@@ -1,7 +1,7 @@
 import { Controller, Post, Req, UseGuards, Get, Res, Query } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { FirebaseAuthGuard } from './firebase-auth/firebase-auth.guard';
-import { Response } from 'express';
+import type { Response } from 'express';
 import { request as gaxiosRequest } from 'gaxios';
 import * as jwt from 'jsonwebtoken';
 
@@ -37,7 +37,7 @@ export class AuthController {
       const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
       const redirectUri = `${process.env.GOOGLE_CALLBACK_URL || (process.env.SITE_URL || '')}/auth/google/callback`;
 
-      const tokenResp = await gaxiosRequest({
+      const tokenResp: any = await gaxiosRequest({
         url: 'https://oauth2.googleapis.com/token',
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -50,7 +50,7 @@ export class AuthController {
         }).toString()
       });
 
-      const idToken = tokenResp.data.id_token;
+      const idToken = (tokenResp?.data as any)?.id_token;
       // decode id_token to get user info
       const decoded: any = jwt.decode(idToken) as any;
 
