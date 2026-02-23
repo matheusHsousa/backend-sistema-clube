@@ -100,7 +100,7 @@ export class TextosBiblicosService {
     }
 
     if (userId) {
-      const { data: user } = await this.supabase.client.from('user').select('id, roles, unidade').eq('id', userId).limit(1).maybeSingle();
+      const { data: user } = await this.supabase.client.from('User').select('id, roles, unidade').eq('id', userId).limit(1).maybeSingle();
       if (user && Array.isArray(user.roles) && user.roles.includes('CONSELHEIRO') && user.unidade) {
         const { data: desIds } = await this.supabase.client.from('desbravador').select('id').eq('unidade', user.unidade);
         const ids = (desIds || []).map((d: any) => d.id);

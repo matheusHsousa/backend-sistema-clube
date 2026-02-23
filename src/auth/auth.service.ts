@@ -24,7 +24,7 @@ export class AuthService {
 
     try {
       const { data: existing } = await this.supabase.client
-        .from('user')
+        .from('User')
         .select('*')
         .eq('firebaseUid', firebaseUser.uid)
         .limit(1)
@@ -35,13 +35,13 @@ export class AuthService {
         const unidade = (firebaseUser.unidade || firebaseUser.claims?.unidade) ?? null;
         const classe = (firebaseUser.classe || firebaseUser.claims?.classe) ?? null;
 
-        const { data: created } = await this.supabase.client
-          .from('user')
+        const { data: created, error: createErr } = await this.supabase.client
+          .from('User')
           .insert([
             {
               firebaseUid: firebaseUser.uid,
-              email: firebaseUser.email,
-              name: firebaseUser.name,
+              email: firebaseUser.email || null,
+              name: firebaseUser.name || null,
               roles: ['CONSELHEIRO'],
               unidade,
               classe,
@@ -50,6 +50,11 @@ export class AuthService {
           .select()
           .limit(1)
           .maybeSingle();
+
+        if (createErr) {
+          console.error('Erro ao criar usuário no Supabase:', createErr);
+          throw createErr;
+        }
 
         return created;
       }
@@ -62,7 +67,7 @@ export class AuthService {
         if (unidade !== undefined) updateData.unidade = unidade;
         if (classe !== undefined) updateData.classe = classe;
         const { data: updated } = await this.supabase.client
-          .from('user')
+          .from('User')
           .update(updateData)
           .eq('id', existing.id)
           .select()
@@ -78,3 +83,4 @@ export class AuthService {
     }
   }
 }
+

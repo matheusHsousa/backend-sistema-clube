@@ -20,8 +20,8 @@ const supabase = createClient(url, key, { auth: { persistSession: false } });
 (async () => {
   try {
     console.log('Testing Supabase connection...');
-    // simple read from `user` table used by the app
-    const { data, error } = await supabase.from('user').select('id, firebaseUid, email').limit(1);
+    // simple read from `User` table used by the app
+    const { data, error } = await supabase.from('User').select('id, firebaseUid, email').limit(1);
     if (error) {
       console.error('Supabase returned error:', error);
       process.exit(1);

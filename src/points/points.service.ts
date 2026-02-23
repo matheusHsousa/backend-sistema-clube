@@ -22,7 +22,7 @@ export class PointsService {
 
     // if authorId provided, validate user exists
     if (payload.authorId) {
-      const { data: author } = await this.supabase.client.from('user').select('id').eq('id', payload.authorId).limit(1).maybeSingle();
+      const { data: author } = await this.supabase.client.from('User').select('id').eq('id', payload.authorId).limit(1).maybeSingle();
       if (!author) throw new NotFoundException('Author user not found');
     }
 

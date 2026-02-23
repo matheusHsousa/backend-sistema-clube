@@ -65,7 +65,7 @@ export class StatsService {
   }
 
   async instrutorClasseResumo(instrutorId: number) {
-    const { data: instrutor } = await this.supabase.client.from('user').select('classe').eq('id', instrutorId).limit(1).maybeSingle();
+    const { data: instrutor } = await this.supabase.client.from('User').select('classe').eq('id', instrutorId).limit(1).maybeSingle();
     const classe = instrutor?.classe;
     if (!classe) {
       return {
