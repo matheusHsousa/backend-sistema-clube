@@ -1,41 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class TextosBiblicosService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private supabase: SupabaseService) {}
 
-  // Listar todos os devedores (pessoas com atrasados sem textos aprovados suficientes)
   async listarDevedores() {
-    const atrasados = await this.prisma.atrasado.findMany({
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        desbravador: {
-          select: {
-            id: true,
-            name: true,
-            unidade: true,
-            classe: true,
-          },
-        },
-        textosBiblicos: true, // trazer todos (aprovados e pendentes)
-      },
-    });
+    const { data: atrasados } = await this.supabase.client
+      .from('atrasado')
+      .select('*, user(id, name, email), desbravador(id, name, unidade, classe), textosBiblicos(*)');
 
-    // Agrupar por pessoa (userId ou desbravadorId)
-    const devedoresMap = new Map();
+    const rows = atrasados || [];
+    const devedoresMap = new Map<string, any>();
 
-    for (const atrasado of atrasados) {
-      const key = atrasado.userId 
-        ? `user-${atrasado.userId}` 
-        : `desbravador-${atrasado.desbravadorId}`;
-
+    for (const atrasado of rows) {
+      const key = atrasado.userId ? `user-${atrasado.userId}` : `desbravador-${atrasado.desbravadorId}`;
       if (!devedoresMap.has(key)) {
         devedoresMap.set(key, {
           tipo: atrasado.userId ? 'usuario' : 'desbravador',
@@ -48,18 +27,15 @@ export class TextosBiblicosService {
 
       const devedor = devedoresMap.get(key);
       devedor.totalAtrasados++;
-      // contar aprovados e pendentes
-      const aprovados = atrasado.textosBiblicos.filter(t => t.aprovado).length;
-      const pendentesEnviados = atrasado.textosBiblicos.filter(t => !t.aprovado).length;
+      const aprovados = (atrasado.textosBiblicos || []).filter((t: any) => t.aprovado).length;
+      const pendentesEnviados = (atrasado.textosBiblicos || []).filter((t: any) => !t.aprovado).length;
       devedor.textosAprovados += aprovados;
       devedor.textosPendentesEnviados = (devedor.textosPendentesEnviados || 0) + pendentesEnviados;
       devedor.atrasadosIds.push(atrasado.id);
     }
 
-    // Filtrar apenas quem está devendo (tem mais atrasados que textos aprovados)
-    // Ajustar dívida considerando textos aprovados e textos já enviados (pendentes)
     const devedores = Array.from(devedoresMap.values())
-      .map(d => {
+      .map((d: any) => {
         const aprovados = d.textosAprovados || 0;
         const enviados = d.textosPendentesEnviados || 0;
         const efetivo = d.totalAtrasados - aprovados - enviados;
@@ -70,120 +46,76 @@ export class TextosBiblicosService {
           textosPendentesEnviados: enviados,
         };
       })
-      .filter(d => d.textosPendentes > 0);
+      .filter((d: any) => d.textosPendentes > 0);
 
     return devedores;
   }
 
-  // Buscar textos pendentes de aprovação
   async listarTextosPendentes() {
-    return this.prisma.textoBiblico.findMany({
-      where: { aprovado: false },
-      include: {
-        atrasado: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-            desbravador: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: {
-        dataEnvio: 'asc',
-      },
-    });
+    const { data } = await this.supabase.client
+      .from('textoBiblico')
+      .select('*, atrasado(user(id, name), desbravador(id, name))')
+      .eq('aprovado', false)
+      .order('dataEnvio', { ascending: true });
+
+    return data || [];
   }
 
-  // Enviar texto bíblico
   async enviarTexto(atrasadoId: number, imagemUrl: string) {
-    return this.prisma.textoBiblico.create({
-      data: {
-        atrasadoId,
-        imagemUrl,
-      },
-      include: {
-        atrasado: {
-          include: {
-            user: true,
-            desbravador: true,
-          },
-        },
-      },
-    });
+    const { data } = await this.supabase.client
+      .from('textoBiblico')
+      .insert([{ atrasadoId, imagemUrl }])
+      .select('*, atrasado(user(*), desbravador(*))')
+      .limit(1)
+      .maybeSingle();
+
+    return data;
   }
 
-  // Aprovar texto
   async aprovarTexto(textoId: number, aprovadorId: number) {
-    return this.prisma.textoBiblico.update({
-      where: { id: textoId },
-      data: {
-        aprovado: true,
-        dataAprovacao: new Date(),
-        aprovadorId,
-      },
-      include: {
-        atrasado: {
-          include: {
-            user: true,
-            desbravador: true,
-          },
-        },
-      },
-    });
+    const { data } = await this.supabase.client
+      .from('textoBiblico')
+      .update({ aprovado: true, dataAprovacao: new Date().toISOString(), aprovadorId })
+      .eq('id', textoId)
+      .select('*, atrasado(user(*), desbravador(*))')
+      .limit(1)
+      .maybeSingle();
+
+    return data;
   }
 
-  // Rejeitar texto (deletar)
   async rejeitarTexto(textoId: number) {
-    return this.prisma.textoBiblico.delete({
-      where: { id: textoId },
-    });
+    const { data } = await this.supabase.client.from('textoBiblico').delete().eq('id', textoId).select().limit(1).maybeSingle();
+    return data;
   }
 
-  // Buscar atrasados de uma pessoa específica (para upload)
   async buscarAtrasadosPessoa(userId?: number, desbravadorId?: number) {
-    // If desbravadorId is provided, return their atrasados
     if (desbravadorId) {
-      return this.prisma.atrasado.findMany({
-        where: { desbravadorId },
-        include: { textosBiblicos: true, desbravador: true, user: true },
-        orderBy: { data: 'desc' },
-      });
+      const { data } = await this.supabase.client
+        .from('atrasado')
+        .select('*, textosBiblicos(*), desbravador(*), user(*)')
+        .eq('desbravadorId', desbravadorId)
+        .order('data', { ascending: false });
+      return data || [];
     }
 
-    // If userId is provided, check if the user is a CONSELHEIRO. If so,
-    // return atrasados for desbravadores in the same unidade as the user.
     if (userId) {
-      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      const { data: user } = await this.supabase.client.from('user').select('id, roles, unidade').eq('id', userId).limit(1).maybeSingle();
       if (user && Array.isArray(user.roles) && user.roles.includes('CONSELHEIRO') && user.unidade) {
-        const atrasados = await this.prisma.atrasado.findMany({
-          where: {
-            desbravador: {
-              is: {
-                unidade: user.unidade,
-              },
-            },
-          },
-          include: { textosBiblicos: true, desbravador: true, user: true },
-          orderBy: { data: 'desc' },
-        });
+        const { data: desIds } = await this.supabase.client.from('desbravador').select('id').eq('unidade', user.unidade);
+        const ids = (desIds || []).map((d: any) => d.id);
+        if (ids.length === 0) return [];
+
+        const { data: atrasados } = await this.supabase.client
+          .from('atrasado')
+          .select('*, textosBiblicos(*), desbravador(*), user(*)')
+          .in('desbravadorId', ids)
+          .order('data', { ascending: false });
 
         // Aggregate into same devedores contract as listarDevedores
-        const devedoresMap = new Map();
-
-        for (const atrasado of atrasados) {
-          const key = atrasado.userId
-            ? `user-${atrasado.userId}`
-            : `desbravador-${atrasado.desbravadorId}`;
-
+        const devedoresMap = new Map<string, any>();
+        for (const atrasado of atrasados || []) {
+          const key = atrasado.userId ? `user-${atrasado.userId}` : `desbravador-${atrasado.desbravadorId}`;
           if (!devedoresMap.has(key)) {
             devedoresMap.set(key, {
               tipo: atrasado.userId ? 'usuario' : 'desbravador',
@@ -196,15 +128,15 @@ export class TextosBiblicosService {
 
           const devedor = devedoresMap.get(key);
           devedor.totalAtrasados++;
-          const aprovados = atrasado.textosBiblicos.filter(t => t.aprovado).length;
-          const pendentesEnviados = atrasado.textosBiblicos.filter(t => !t.aprovado).length;
+          const aprovados = (atrasado.textosBiblicos || []).filter((t: any) => t.aprovado).length;
+          const pendentesEnviados = (atrasado.textosBiblicos || []).filter((t: any) => !t.aprovado).length;
           devedor.textosAprovados += aprovados;
           devedor.textosPendentesEnviados = (devedor.textosPendentesEnviados || 0) + pendentesEnviados;
           devedor.atrasadosIds.push(atrasado.id);
         }
 
         const devedores = Array.from(devedoresMap.values())
-          .map(d => {
+          .map((d: any) => {
             const aprovados = d.textosAprovados || 0;
             const enviados = d.textosPendentesEnviados || 0;
             const efetivo = d.totalAtrasados - aprovados - enviados;
@@ -215,20 +147,20 @@ export class TextosBiblicosService {
               textosPendentesEnviados: enviados,
             };
           })
-          .filter(d => d.textosPendentes > 0);
+          .filter((d: any) => d.textosPendentes > 0);
 
         return devedores;
       }
 
-      // Otherwise, return atrasados where the user is linked (e.g., parent/guardian)
-      return this.prisma.atrasado.findMany({
-        where: { userId },
-        include: { textosBiblicos: true, desbravador: true, user: true },
-        orderBy: { data: 'desc' },
-      });
+      const { data } = await this.supabase.client
+        .from('atrasado')
+        .select('*, textosBiblicos(*), desbravador(*), user(*)')
+        .eq('userId', userId)
+        .order('data', { ascending: false });
+
+      return data || [];
     }
 
-    // Fallback: return empty array
     return [];
   }
 }

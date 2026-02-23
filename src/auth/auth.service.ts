@@ -1,17 +1,15 @@
 // backend/src/auth/auth.service.ts
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { User } from '@prisma/client';
+import { SupabaseService } from '../supabase/supabase.service';
 import { FirebaseService } from '../firebase/firebase.service';
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService, private firebaseService: FirebaseService) {}
+  constructor(private supabase: SupabaseService, private firebaseService: FirebaseService) {}
 
   async validateUser(token: string) {
     try {
       const decodedToken = await this.firebaseService.verifyToken(token);
-      // ao validar o token, busca/cria o usuário no banco e retorna o usuário do backend
       const backendUser = await this.handleUser(decodedToken);
       return backendUser;
     } catch (err) {
@@ -20,46 +18,62 @@ export class AuthService {
     }
   }
 
-  async handleUser(firebaseUser: any): Promise<User> {
+  async handleUser(firebaseUser: any) {
     console.log('🔥 Firebase user recebido:', firebaseUser);
 
-    let user;
     try {
-      user = await this.prisma.user.findUnique({
-        where: { firebaseUid: firebaseUser.uid },
-      });
+      const { data: existing } = await this.supabase.client
+        .from('user')
+        .select('*')
+        .eq('firebaseUid', firebaseUser.uid)
+        .limit(1)
+        .maybeSingle();
 
-      if (!user) {
+      if (!existing) {
         console.log('🆕 Usuário novo, criando...');
+        const unidade = (firebaseUser.unidade || firebaseUser.claims?.unidade) ?? null;
+        const classe = (firebaseUser.classe || firebaseUser.claims?.classe) ?? null;
 
-        // tenta extrair unidade/classe de custom claims ou do objeto firebaseUser
-        const unidade = (firebaseUser.unidade || firebaseUser.claims?.unidade) ?? undefined;
-        const classe = (firebaseUser.classe || firebaseUser.claims?.classe) ?? undefined;
+        const { data: created } = await this.supabase.client
+          .from('user')
+          .insert([
+            {
+              firebaseUid: firebaseUser.uid,
+              email: firebaseUser.email,
+              name: firebaseUser.name,
+              roles: ['CONSELHEIRO'],
+              unidade,
+              classe,
+            },
+          ])
+          .select()
+          .limit(1)
+          .maybeSingle();
 
-        user = await (this.prisma as any).user.create({
-          data: {
-            firebaseUid: firebaseUser.uid,
-            email: firebaseUser.email!,
-            name: firebaseUser.name,
-            roles: ['CONSELHEIRO'],
-            unidade: unidade,
-            classe: classe,
-          },
-        });
-      } else {
-        console.log('✅ Usuário existente:', user.email);
-        // se já existe, podemos tentar atualizar unidade/classe caso venham nas claims
-        const unidade = (firebaseUser.unidade || firebaseUser.claims?.unidade) ?? undefined;
-        const classe = (firebaseUser.classe || firebaseUser.claims?.classe) ?? undefined;
-        if (unidade || classe) {
-          await (this.prisma as any).user.update({ where: { id: user.id }, data: { unidade: unidade, classe: classe } });
-        }
+        return created;
       }
+
+      // update unidade/classe if present in claims
+      const unidade = (firebaseUser.unidade || firebaseUser.claims?.unidade) ?? undefined;
+      const classe = (firebaseUser.classe || firebaseUser.claims?.classe) ?? undefined;
+      if (unidade !== undefined || classe !== undefined) {
+        const updateData: any = {};
+        if (unidade !== undefined) updateData.unidade = unidade;
+        if (classe !== undefined) updateData.classe = classe;
+        const { data: updated } = await this.supabase.client
+          .from('user')
+          .update(updateData)
+          .eq('id', existing.id)
+          .select()
+          .limit(1)
+          .maybeSingle();
+        return updated || existing;
+      }
+
+      return existing;
     } catch (err) {
       console.error('🔥 ERRO ao buscar/criar usuário:', err);
       throw err;
     }
-
-    return user;
   }
 }

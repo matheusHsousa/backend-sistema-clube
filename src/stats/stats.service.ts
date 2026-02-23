@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { Classe, Unidade } from '@prisma/client';
+import { SupabaseService } from '../supabase/supabase.service';
+import { Unidade } from '@prisma/client';
 
 @Injectable()
 export class StatsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private supabase: SupabaseService) {}
 
   private getSundayEnd(date: Date) {
     const sunday = new Date(date);
@@ -41,21 +41,18 @@ export class StatsService {
 
   // Instrutor: quantos requisitos foram passados por requisito e lista de desbravadores
   async requisitosPassedByInstrutor(instrutorId: number, start?: string, end?: string) {
-    const where: any = { instrutorId };
-    if (start || end) {
-      where.data = {};
-      if (start) where.data.gte = new Date(start);
-      if (end) where.data.lte = new Date(end);
-    }
+    let q = this.supabase.client
+      .from('desbravadorRequisito')
+      .select('*, desbravador(*), requisito(*)')
+      .eq('instrutorId', instrutorId);
 
-    const registros = await this.prisma.desbravadorRequisito.findMany({
-      where,
-      include: { desbravador: true, requisito: true }
-    });
+    if (start) q = q.gte('data', new Date(start).toISOString());
+    if (end) q = q.lte('data', new Date(end).toISOString());
 
-    // agrupar por requisito
+    const { data: registros } = await q;
+
     const map = new Map();
-    for (const r of registros) {
+    for (const r of registros || []) {
       const key = r.requisitoId;
       if (!map.has(key)) map.set(key, { requisito: r.requisito, count: 0, desbravadores: [] });
       const entry = map.get(key);
@@ -67,11 +64,7 @@ export class StatsService {
   }
 
   async instrutorClasseResumo(instrutorId: number) {
-    const instrutor = await this.prisma.user.findUnique({
-      where: { id: instrutorId },
-      select: { classe: true }
-    });
-
+    const { data: instrutor } = await this.supabase.client.from('user').select('classe').eq('id', instrutorId).limit(1).maybeSingle();
     const classe = instrutor?.classe;
     if (!classe) {
       return {
@@ -83,99 +76,77 @@ export class StatsService {
         desbravadoresPercent: []
       };
     }
+    const { data: classeEntity } = await this.supabase.client.from('classeEntity').select('*, requisitos(*)').eq('nome', classe).limit(1).maybeSingle();
 
-    const classeEntity = await this.prisma.classeEntity.findUnique({
-      where: { nome: classe },
-      include: { requisitos: true }
-    });
+    const { data: desbravadores } = await this.supabase.client.from('desbravador').select('id, name').eq('classe', classe).order('name', { ascending: true });
 
-    const desbravadores = await this.prisma.desbravador.findMany({
-      where: { classe: classe as Classe },
-      select: { id: true, name: true },
-      orderBy: { name: 'asc' }
-    });
-
-    const requisitosConcluidos = await this.prisma.desbravadorRequisito.findMany({
-      where: { desbravador: { classe: classe as Classe } },
-      select: { desbravadorId: true }
-    });
+    const { data: requisitosConcluidos } = await this.supabase.client.from('desbravadorRequisito').select('desbravadorId').in('desbravadorId', (desbravadores || []).map((d: any) => d.id));
 
     const requisitosPorDesbravador = new Map<number, number>();
-    for (const req of requisitosConcluidos) {
-      requisitosPorDesbravador.set(
-        req.desbravadorId,
-        (requisitosPorDesbravador.get(req.desbravadorId) ?? 0) + 1
-      );
+    for (const req of requisitosConcluidos || []) {
+      requisitosPorDesbravador.set(req.desbravadorId, (requisitosPorDesbravador.get(req.desbravadorId) ?? 0) + 1);
     }
 
-    const totalRequisitos = classeEntity?.requisitos?.length ?? 0;
-    const totalDesbravadores = desbravadores.length;
+    const totalRequisitos = (classeEntity?.requisitos || []).length ?? 0;
+    const totalDesbravadores = (desbravadores || []).length;
     const itensTotal = totalRequisitos * totalDesbravadores;
-    const itensConcluidos = requisitosConcluidos.length;
+    const itensConcluidos = (requisitosConcluidos || []).length;
     const progressoClasse = itensTotal > 0 ? (itensConcluidos / itensTotal) * 100 : 0;
     const progressoClasseRounded = Math.round(progressoClasse * 100) / 100;
 
-    const desbravadoresData = desbravadores.map((d) => ({
-      name: d.name,
-      concluidos: requisitosPorDesbravador.get(d.id) ?? 0
-    }));
+    const desbravadoresData = (desbravadores || []).map((d: any) => ({ name: d.name, concluidos: requisitosPorDesbravador.get(d.id) ?? 0 }));
 
-    const desbravadoresPercent = desbravadores.map((d) => {
+    const desbravadoresPercent = (desbravadores || []).map((d: any) => {
       const concluidos = requisitosPorDesbravador.get(d.id) ?? 0;
       const percentual = totalRequisitos > 0 ? (concluidos / totalRequisitos) * 100 : 0;
-      return {
-        name: d.name,
-        percentual: Math.round(percentual * 100) / 100
-      };
+      return { name: d.name, percentual: Math.round(percentual * 100) / 100 };
     });
 
-    return {
-      classe,
-      progressoClasse: progressoClasseRounded,
-      itensConcluidos,
-      itensTotal,
-      desbravadores: desbravadoresData,
-      desbravadoresPercent
-    };
+    return { classe, progressoClasse: progressoClasseRounded, itensConcluidos, itensTotal, desbravadores: desbravadoresData, desbravadoresPercent };
   }
 
   // Conselheiro: pontuação por desbravador em unidade, média por unidade e melhor/pior
   async pointsSummaryForConselheiro(unidade: Unidade | string, start?: string, end?: string) {
-    // buscar desbravadores da unidade
     const unitVal = unidade as Unidade;
-    const des = await this.prisma.desbravador.findMany({ where: { unidade: unitVal } });
-    const ids = des.map(d => d.id);
+    const { data: des } = await this.supabase.client.from('desbravador').select('id').eq('unidade', unitVal);
+    const ids = (des || []).map((d: any) => d.id);
 
-    // buscar points para esses desbravadores
-    const points = await this.prisma.points.findMany({ where: { desbravadorId: { in: ids } }, include: { desbravador: true } });
+    const { data: points } = await this.supabase.client.from('points').select('*, desbravador(*)').in('desbravadorId', ids);
 
-    // média por unidade (comparação com outras unidades)
-    const units = await this.prisma.desbravador.groupBy({ by: ['unidade'], _avg: { id: true } }).catch(() => []);
-
-    // compute best/worst
-    const sorted = points.slice().sort((a,b) => b.total - a.total);
+    const sorted = (points || []).slice().sort((a: any, b: any) => (b.total ?? 0) - (a.total ?? 0));
     const best = sorted[0] ?? null;
-    const worst = sorted[sorted.length-1] ?? null;
+    const worst = sorted[sorted.length - 1] ?? null;
 
-    return { points, best, worst, unitsAvg: units };
+    // unitsAvg approximation: average points per unit
+    const { data: allDes } = await this.supabase.client.from('desbravador').select('id, unidade');
+    const unitsMap: Record<string, { sum: number; count: number }> = {};
+    const { data: allPoints } = await this.supabase.client.from('points').select('desbravadorId, total');
+    const pointsByDes = new Map((allPoints || []).map((p: any) => [p.desbravadorId, p.total]));
+    for (const drow of allDes || []) {
+      const unit = drow.unidade || '';
+      unitsMap[unit] = unitsMap[unit] || { sum: 0, count: 0 };
+      const pid = drow.id;
+      const pts = pointsByDes.get(pid) ?? 0;
+      unitsMap[unit].sum += pts;
+      unitsMap[unit].count += 1;
+    }
+
+    const unitsAvg = Object.keys(unitsMap).map((u) => ({ unidade: u, avg: unitsMap[u].count ? unitsMap[u].sum / unitsMap[u].count : 0 }));
+
+    return { points: points || [], best, worst, unitsAvg };
   }
 
   // Admin: stats por unidade e classe
   async adminOverview(start?: string, end?: string) {
-    // total requisitos aprovados por unidade/classe
-    const aprovados = await this.prisma.desbravadorRequisito.groupBy({ by: ['desbravadorId'], _count: { id: true } });
+    const { data: aprovados } = await this.supabase.client.from('desbravadorRequisito').select('desbravadorId, id');
+    const aprovadosCount = (aprovados || []).reduce((acc: Record<number, number>, row: any) => { acc[row.desbravadorId] = (acc[row.desbravadorId] || 0) + 1; return acc; }, {});
 
-    // pontos agregados por unidade/classe
-    const pts = await this.prisma.points.findMany({ include: { desbravador: true } });
-
-    return { aprovados, pts };
+    const { data: pts } = await this.supabase.client.from('points').select('*, desbravador(*)');
+    return { aprovados: aprovadosCount, pts: pts || [] };
   }
 
   async adminDesbravadoresUnidadeSemanal(weeks = 12) {
-    const desbravadores = await this.prisma.desbravador.findMany({
-      select: { unidade: true, createdAt: true },
-      orderBy: { createdAt: 'asc' }
-    });
+    const { data: desbravadores } = await this.supabase.client.from('desbravador').select('unidade, createdAt').order('createdAt', { ascending: true });
 
     const unidades = Object.values(Unidade);
     const totals = unidades.reduce((acc, unidade) => {
@@ -194,23 +165,15 @@ export class StatsService {
       sundayPoints.push(d);
     }
 
-    let pointer = 0;
+    // build cumulative counts per sunday
     const rows = sundayPoints.map((sunday) => {
-      while (pointer < desbravadores.length && desbravadores[pointer].createdAt <= sunday) {
-        const unidade = desbravadores[pointer].unidade;
-        totals[unidade] = (totals[unidade] ?? 0) + 1;
-        pointer += 1;
+      const values = unidades.reduce((acc, unidade) => ({ ...acc, [unidade]: 0 }), {} as Record<string, number>);
+      for (const d of desbravadores || []) {
+        if (new Date(d.createdAt) <= sunday) {
+          values[d.unidade] = (values[d.unidade] || 0) + 1;
+        }
       }
-
-      const values = unidades.reduce((acc, unidade) => {
-        acc[unidade] = totals[unidade] ?? 0;
-        return acc;
-      }, {} as Record<string, number>);
-
-      return {
-        date: this.formatDateKey(sunday),
-        values
-      };
+      return { date: this.formatDateKey(sunday), values };
     });
 
     return {
@@ -220,55 +183,36 @@ export class StatsService {
   }
 
   async adminRequisitosPorClasse() {
-    const requisitos = await this.prisma.desbravadorRequisito.findMany({
-      include: { desbravador: true }
-    });
-
+    const { data: requisitos } = await this.supabase.client.from('desbravadorRequisito').select('desbravadorId, desbravador(*)');
     const classeMap = new Map<string, Set<number>>();
-    for (const req of requisitos) {
-      const classe = req?.desbravador?.classe;
+    for (const req of requisitos || []) {
+      const des: any = req?.desbravador;
+      const classe = Array.isArray(des) ? des[0]?.classe : des?.classe;
       if (!classe) continue;
       if (!classeMap.has(classe)) classeMap.set(classe, new Set());
       classeMap.get(classe)!.add(req.desbravadorId);
     }
 
-    const data = Array.from(classeMap.entries())
-      .map(([classe, desbravadores]) => [classe, desbravadores.size])
-      .sort((a, b) => (b[1] as number) - (a[1] as number));
-
+    const data = Array.from(classeMap.entries()).map(([classe, desbravadores]) => [classe, desbravadores.size]).sort((a, b) => (b[1] as number) - (a[1] as number));
     return { data };
   }
 
   async adminProgressoClasses() {
-    const classeEntities = await this.prisma.classeEntity.findMany({
-      include: { requisitos: true }
-    });
-
-    const desbravadores = await this.prisma.desbravador.findMany({
-      select: { id: true, classe: true }
-    });
-
-    const requisitosCompletos = await this.prisma.desbravadorRequisito.findMany({
-      select: { desbravadorId: true }
-    });
+    const { data: classeEntities } = await this.supabase.client.from('classeEntity').select('*, requisitos(*)');
+    const { data: desbravadores } = await this.supabase.client.from('desbravador').select('id, classe');
+    const { data: requisitosCompletos } = await this.supabase.client.from('desbravadorRequisito').select('desbravadorId');
 
     const requisitosPorDesbravador = new Map<number, number>();
-    for (const req of requisitosCompletos) {
-      requisitosPorDesbravador.set(
-        req.desbravadorId,
-        (requisitosPorDesbravador.get(req.desbravadorId) ?? 0) + 1
-      );
+    for (const req of requisitosCompletos || []) {
+      requisitosPorDesbravador.set(req.desbravadorId, (requisitosPorDesbravador.get(req.desbravadorId) ?? 0) + 1);
     }
 
     const data: Array<{ classe: string; progresso: number; itemsFeitos: number; itemsTotal: number; legenda: string }> = [];
 
-    for (const classeEntity of classeEntities) {
+    for (const classeEntity of (classeEntities || [])) {
       const nomeSqlite = classeEntity.nome;
-      const desbravadoresDaClasse = desbravadores.filter(
-        (d) => d.classe === nomeSqlite
-      );
-
-      const totalRequisitos = classeEntity.requisitos.length || 1;
+      const desbravadoresDaClasse = (desbravadores || []).filter((d: any) => d.classe === nomeSqlite);
+      const totalRequisitos = (classeEntity.requisitos || []).length || 1;
       let totalItemsFeitos = 0;
       let desbravadoresComItens = 0;
 
@@ -285,55 +229,33 @@ export class StatsService {
 
       const percentualRounded = Math.round(percentualCompletos * 100) / 100;
       const percentualItensRounded = Math.round(percentualItens * 100) / 100;
-      
-      data.push({
-        classe: nomeSqlite,
-        progresso: percentualRounded,
-        itemsFeitos: totalItemsFeitos,
-        itemsTotal: itemsTotal,
-        legenda: `${totalItemsFeitos}/${itemsTotal} - ${percentualItensRounded}%`
-      });
+
+      data.push({ classe: nomeSqlite, progresso: percentualRounded, itemsFeitos: totalItemsFeitos, itemsTotal: itemsTotal, legenda: `${totalItemsFeitos}/${itemsTotal} - ${percentualItensRounded}%` });
     }
 
     return { data: data.sort((a, b) => b.progresso - a.progresso) };
   }
 
   async conselheiropontuacaoSemanal(unidade: string, weeks = 12) {
-    const desbravadores = await this.prisma.desbravador.findMany({
-      where: { unidade: unidade as Unidade },
-      select: { id: true, name: true },
-      orderBy: { name: 'asc' }
-    });
-
-    const transacoes = await this.prisma.pointsTransaction.findMany({
-      where: { points: { desbravador: { unidade: unidade as Unidade } } },
-      include: { points: { select: { desbravadorId: true } } },
-      orderBy: { reason: 'asc' }
-    });
+    const { data: desbravadores } = await this.supabase.client.from('desbravador').select('id, name').eq('unidade', unidade).order('name', { ascending: true });
+    const desIds = (desbravadores || []).map((d: any) => d.id);
+    const { data: transacoes } = await this.supabase.client.from('pointsTransaction').select('*, points(desbravadorId)').in('points.desbravadorId', desIds).order('reason', { ascending: true });
 
     const acumuladoPorDesbravador = new Map<number, number>();
     const transacoesPorDesbravador = new Map<number, Array<{ data: Date; amount: number }>>();
 
-    for (const transacao of transacoes) {
-      const desbravaId = transacao.points.desbravadorId;
+    for (const transacao of transacoes || []) {
+      const desbravaId = transacao.points?.desbravadorId;
       const amount = transacao.amount;
-      const dataExtraida = (transacao.reason ? this.extractDateFromReason(transacao.reason) : null) || transacao.createdAt;
-
-      acumuladoPorDesbravador.set(
-        desbravaId,
-        (acumuladoPorDesbravador.get(desbravaId) ?? 0) + amount
-      );
-
-      if (!transacoesPorDesbravador.has(desbravaId)) {
-        transacoesPorDesbravador.set(desbravaId, []);
-      }
+      const dataExtraida = (transacao.reason ? this.extractDateFromReason(transacao.reason) : null) || new Date(transacao.createdAt);
+      acumuladoPorDesbravador.set(desbravaId, (acumuladoPorDesbravador.get(desbravaId) ?? 0) + amount);
+      if (!transacoesPorDesbravador.has(desbravaId)) transacoesPorDesbravador.set(desbravaId, []);
       transacoesPorDesbravador.get(desbravaId)!.push({ data: dataExtraida, amount });
     }
 
     const now = new Date();
     const lastSunday = this.getSundayEnd(now);
     const sundayPoints: Date[] = [];
-
     const safeWeeks = Number.isFinite(weeks) && weeks > 0 ? Math.min(weeks, 104) : 12;
     for (let i = safeWeeks - 1; i >= 0; i--) {
       const d = new Date(lastSunday);
@@ -343,58 +265,34 @@ export class StatsService {
 
     const rows = sundayPoints.map((sunday) => {
       const row: any = { date: this.formatDateBR(sunday) };
-
-      for (const desbrav of desbravadores) {
+      for (const desbrav of desbravadores || []) {
         const transacoesDesbrav = transacoesPorDesbravador.get(desbrav.id) ?? [];
         let acumulado = 0;
-
         for (const trans of transacoesDesbrav) {
-          if (trans.data <= sunday) {
-            acumulado += trans.amount;
-          }
+          if (trans.data <= sunday) acumulado += trans.amount;
         }
-
         row[desbrav.name] = acumulado;
       }
-
       return row;
     });
 
-    return {
-      desbravadores: desbravadores.map((d) => d.name),
-      rows
-    };
+    return { desbravadores: (desbravadores || []).map((d: any) => d.name), rows };
   }
 
   async conselheiroBestWorstDesbravador(unidade: string, weeks = 12) {
-    const desbravadores = await this.prisma.desbravador.findMany({
-      where: { unidade: unidade as Unidade },
-      select: { id: true, name: true },
-      orderBy: { name: 'asc' }
-    });
-
-    const transacoes = await this.prisma.pointsTransaction.findMany({
-      where: { points: { desbravador: { unidade: unidade as Unidade } } },
-      include: { points: { select: { desbravadorId: true } } },
-      orderBy: { reason: 'asc' }
-    });
+    const { data: desbravadores } = await this.supabase.client.from('desbravador').select('id, name').eq('unidade', unidade).order('name', { ascending: true });
+    const desIds = (desbravadores || []).map((d: any) => d.id);
+    const { data: transacoes } = await this.supabase.client.from('pointsTransaction').select('*, points(desbravadorId)').in('points.desbravadorId', desIds).order('reason', { ascending: true });
 
     const acumuladoPorDesbravador = new Map<number, number>();
     const transacoesPorDesbravador = new Map<number, Array<{ data: Date; amount: number }>>();
 
-    for (const transacao of transacoes) {
-      const desbravaId = transacao.points.desbravadorId;
+    for (const transacao of transacoes || []) {
+      const desbravaId = transacao.points?.desbravadorId;
       const amount = transacao.amount;
-      const dataExtraida = (transacao.reason ? this.extractDateFromReason(transacao.reason) : null) || transacao.createdAt;
-
-      acumuladoPorDesbravador.set(
-        desbravaId,
-        (acumuladoPorDesbravador.get(desbravaId) ?? 0) + amount
-      );
-
-      if (!transacoesPorDesbravador.has(desbravaId)) {
-        transacoesPorDesbravador.set(desbravaId, []);
-      }
+      const dataExtraida = (transacao.reason ? this.extractDateFromReason(transacao.reason) : null) || new Date(transacao.createdAt);
+      acumuladoPorDesbravador.set(desbravaId, (acumuladoPorDesbravador.get(desbravaId) ?? 0) + amount);
+      if (!transacoesPorDesbravador.has(desbravaId)) transacoesPorDesbravador.set(desbravaId, []);
       transacoesPorDesbravador.get(desbravaId)!.push({ data: dataExtraida, amount });
     }
 
@@ -403,7 +301,7 @@ export class StatsService {
     let maxPontos = -Infinity;
     let minPontos = Infinity;
 
-    for (const desbrav of desbravadores) {
+    for (const desbrav of desbravadores || []) {
       const total = acumuladoPorDesbravador.get(desbrav.id) ?? 0;
       if (total > maxPontos) {
         maxPontos = total;
@@ -430,7 +328,7 @@ export class StatsService {
       const row: any = { date: this.formatDateBR(sunday) };
 
       if (bestDesbravador) {
-        const desbravBest = desbravadores.find((d) => d.name === bestDesbravador);
+          const desbravBest = (desbravadores || []).find((d) => d.name === bestDesbravador);
         if (desbravBest) {
           const transacoesDesbrav = transacoesPorDesbravador.get(desbravBest.id) ?? [];
           let acumulado = 0;
@@ -444,7 +342,7 @@ export class StatsService {
       }
 
       if (worstDesbravador) {
-        const desbravWorst = desbravadores.find((d) => d.name === worstDesbravador);
+        const desbravWorst = (desbravadores || []).find((d) => d.name === worstDesbravador);
         if (desbravWorst) {
           const transacoesDesbrav = transacoesPorDesbravador.get(desbravWorst.id) ?? [];
           let acumulado = 0;
@@ -468,28 +366,16 @@ export class StatsService {
   }
 
   async conselheiroAusencias(unidade: string, startDate?: string) {
-    const desbravadores = await this.prisma.desbravador.findMany({
-      where: { unidade: unidade as Unidade },
-      select: { id: true, name: true },
-      orderBy: { name: 'asc' }
-    });
-
-    const transacoes = await this.prisma.pointsTransaction.findMany({
-      where: { points: { desbravador: { unidade: unidade as Unidade } } },
-      include: { points: { select: { desbravadorId: true } } },
-      orderBy: { reason: 'asc' }
-    });
+    const { data: desbravadores } = await this.supabase.client.from('desbravador').select('id, name').eq('unidade', unidade).order('name', { ascending: true });
+    const desIds = (desbravadores || []).map((d: any) => d.id);
+    const { data: transacoes } = await this.supabase.client.from('pointsTransaction').select('*, points(desbravadorId)').in('points.desbravadorId', desIds).order('reason', { ascending: true });
 
     const transacoesPorDesbravadorPorData = new Map<number, Set<string>>();
-
-    for (const transacao of transacoes) {
-      const desbravaId = transacao.points.desbravadorId;
-      const dataExtraida = (transacao.reason ? this.extractDateFromReason(transacao.reason) : null) || transacao.createdAt;
+    for (const transacao of transacoes || []) {
+      const desbravaId = transacao.points?.desbravadorId;
+      const dataExtraida = (transacao.reason ? this.extractDateFromReason(transacao.reason) : null) || new Date(transacao.createdAt);
       const dataKey = this.formatDateKey(dataExtraida);
-
-      if (!transacoesPorDesbravadorPorData.has(desbravaId)) {
-        transacoesPorDesbravadorPorData.set(desbravaId, new Set());
-      }
+      if (!transacoesPorDesbravadorPorData.has(desbravaId)) transacoesPorDesbravadorPorData.set(desbravaId, new Set());
       transacoesPorDesbravadorPorData.get(desbravaId)!.add(dataKey);
     }
 
@@ -516,7 +402,7 @@ export class StatsService {
 
     const ausenciaPorDesbravador = new Map<number, number>();
     const ausenciasSequencia: string[] = [];
-    for (const desbrav of desbravadores) {
+    for (const desbrav of desbravadores || []) {
       let ausencias = 0;
       let streak = 0;
       let maiorSequencia = 0;
@@ -539,8 +425,8 @@ export class StatsService {
       }
     }
 
-    const data = desbravadores
-      .map((d) => [d.name, ausenciaPorDesbravador.get(d.id) ?? 0])
+    const data = (desbravadores || [])
+      .map((d: any) => [d.name, ausenciaPorDesbravador.get(d.id) ?? 0])
       .sort((a, b) => (b[1] as number) - (a[1] as number));
 
     return { data, ausenciasSequencia };

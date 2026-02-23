@@ -1,42 +1,28 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class AtrasadosService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private supabase: SupabaseService) {}
 
   async marcarAtrasado(userId?: number, desbravadorId?: number, observacao?: string) {
     if (!userId && !desbravadorId) {
       throw new Error('É necessário fornecer userId ou desbravadorId');
     }
 
-    const atrasado = await this.prisma.atrasado.create({
-      data: {
-        userId: userId || null,
-        desbravadorId: desbravadorId || null,
-        observacao,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            roles: true,
-          },
-        },
-        desbravador: {
-          select: {
-            id: true,
-            name: true,
-            unidade: true,
-            classe: true,
-          },
-        },
-      },
-    });
+    const payload: any = {
+      userId: userId || null,
+      desbravadorId: desbravadorId || null,
+      observacao,
+    };
 
-    // Se é desbravador, remover pontos do ranking
+    const { data: atrasado } = await this.supabase.client
+      .from('atrasado')
+      .insert([payload])
+      .select('*, user(id, name, email, roles), desbravador(id, name, unidade, classe)')
+      .limit(1)
+      .maybeSingle();
+
     if (desbravadorId) {
       await this.removerPontosAtrasado(desbravadorId);
     }
@@ -45,69 +31,42 @@ export class AtrasadosService {
   }
 
   async removerPontosAtrasado(desbravadorId: number) {
-    // Remover 1 ponto por atrasado
-    const points = await this.prisma.points.findUnique({
-      where: { desbravadorId },
-    });
+    const { data: points } = await this.supabase.client.from('points').select('*').eq('desbravadorId', desbravadorId).limit(1).maybeSingle();
 
     if (points) {
-      await this.prisma.pointsTransaction.create({
-        data: {
-          pointsId: points.id,
-          amount: -1,
-          type: 'ADJUST',
-          reason: 'Atrasado',
-        },
-      });
-
-      await this.prisma.points.update({
-        where: { desbravadorId },
-        data: { total: Math.max(0, points.total - 1) },
-      });
+      await this.supabase.client.from('pointsTransaction').insert([{ pointsId: points.id, amount: -1, type: 'ADJUST', reason: 'Atrasado' }]);
+      const newTotal = Math.max(0, (points.total ?? 0) - 1);
+      await this.supabase.client.from('points').update({ total: newTotal }).eq('desbravadorId', desbravadorId);
     } else {
-      // Se não tem pontos ainda, criar com valor 0
-      await this.prisma.points.create({
-        data: {
-          desbravadorId,
-          total: 0,
-          transactions: {
-            create: {
-              amount: -1,
-              type: 'ADJUST',
-              reason: 'Atrasado',
-            },
-          },
-        },
-      });
+      const { data: created } = await this.supabase.client
+        .from('points')
+        .insert([{ desbravadorId, total: 0 }])
+        .select()
+        .limit(1)
+        .maybeSingle();
+
+      if (created) {
+        await this.supabase.client.from('pointsTransaction').insert([{ pointsId: created.id, amount: -1, type: 'ADJUST', reason: 'Atrasado' }]);
+      }
     }
   }
 
   async removerAtrasado(atrasadoId: number) {
-    const atrasado = await this.prisma.atrasado.delete({
-      where: { id: atrasadoId },
-      include: { desbravador: true },
-    });
+    const { data: atrasado } = await this.supabase.client
+      .from('atrasado')
+      .delete()
+      .eq('id', atrasadoId)
+      .select('*, desbravador(id)')
+      .limit(1)
+      .maybeSingle();
 
-    // Devolver ponto se era desbravador
-    if (atrasado.desbravadorId) {
-      const points = await this.prisma.points.findUnique({
-        where: { desbravadorId: atrasado.desbravadorId },
-      });
+    if (atrasado?.desbravador?.id) {
+      const desbravadorId = atrasado.desbravador.id;
+      const { data: points } = await this.supabase.client.from('points').select('*').eq('desbravadorId', desbravadorId).limit(1).maybeSingle();
 
       if (points) {
-        await this.prisma.pointsTransaction.create({
-          data: {
-            pointsId: points.id,
-            amount: 1,
-            type: 'ADJUST',
-            reason: 'Atrasado removido',
-          },
-        });
-
-        await this.prisma.points.update({
-          where: { desbravadorId: atrasado.desbravadorId },
-          data: { total: points.total + 1 },
-        });
+        await this.supabase.client.from('pointsTransaction').insert([{ pointsId: points.id, amount: 1, type: 'ADJUST', reason: 'Atrasado removido' }]);
+        await this.supabase.client.from('points').update({ total: (points.total ?? 0) + 1 }).eq('desbravadorId', desbravadorId);
       }
     }
 
@@ -115,98 +74,39 @@ export class AtrasadosService {
   }
 
   async listarAtrasados(filtro?: { data?: Date; userId?: number; desbravadorId?: number }) {
-    const where: any = {};
+    let q = this.supabase.client
+      .from('atrasado')
+      .select('*, user(id, name, email, roles), desbravador(id, name, unidade, classe)')
+      .order('data', { ascending: false });
 
     if (filtro?.data) {
       const data = new Date(filtro.data);
       const ehDataValida = !Number.isNaN(data.getTime());
-
       if (ehDataValida) {
-        const inicio = new Date(Date.UTC(
-          data.getUTCFullYear(),
-          data.getUTCMonth(),
-          data.getUTCDate(),
-          0,
-          0,
-          0,
-          0,
-        ));
-        const fimExclusivo = new Date(Date.UTC(
-          data.getUTCFullYear(),
-          data.getUTCMonth(),
-          data.getUTCDate() + 1,
-          0,
-          0,
-          0,
-          0,
-        ));
-
-        where.data = {
-          gte: inicio,
-          lt: fimExclusivo,
-        };
+        const inicio = new Date(Date.UTC(data.getUTCFullYear(), data.getUTCMonth(), data.getUTCDate(), 0, 0, 0, 0));
+        const fimExclusivo = new Date(Date.UTC(data.getUTCFullYear(), data.getUTCMonth(), data.getUTCDate() + 1, 0, 0, 0, 0));
+        q = q.gte('data', inicio.toISOString()).lt('data', fimExclusivo.toISOString());
       }
     }
 
-    if (filtro?.userId) {
-      where.userId = filtro.userId;
-    }
+    if (filtro?.userId) q = q.eq('userId', filtro.userId);
+    if (filtro?.desbravadorId) q = q.eq('desbravadorId', filtro.desbravadorId);
 
-    if (filtro?.desbravadorId) {
-      where.desbravadorId = filtro.desbravadorId;
-    }
-
-    return this.prisma.atrasado.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            roles: true,
-          },
-        },
-        desbravador: {
-          select: {
-            id: true,
-            name: true,
-            unidade: true,
-            classe: true,
-          },
-        },
-      },
-      orderBy: { data: 'desc' },
-    });
+    const { data } = await q;
+    return data || [];
   }
 
   async listarAtrasadosHoje() {
-    const hoje = new Date();
-
-    return this.listarAtrasados({ data: hoje });
+    return this.listarAtrasados({ data: new Date() });
   }
 
   async listarTodosUsuarios() {
-    return this.prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        roles: true,
-      },
-      orderBy: { name: 'asc' },
-    });
+    const { data } = await this.supabase.client.from('user').select('id, name, email, roles').order('name', { ascending: true });
+    return data || [];
   }
 
   async listarTodosDesbravadores() {
-    return this.prisma.desbravador.findMany({
-      select: {
-        id: true,
-        name: true,
-        unidade: true,
-        classe: true,
-      },
-      orderBy: { name: 'asc' },
-    });
+    const { data } = await this.supabase.client.from('desbravador').select('id, name, unidade, classe').order('name', { ascending: true });
+    return data || [];
   }
 }

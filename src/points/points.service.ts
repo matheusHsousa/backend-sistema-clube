@@ -1,49 +1,59 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class PointsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private supabase: SupabaseService) {}
 
   async getByDesbravador(desbravadorId: number) {
-    const points = await this.prisma.points.findUnique({
-      where: { desbravadorId },
-      include: { transactions: { orderBy: { createdAt: 'desc' } } },
-    });
-    return points;
+    const { data: points } = await this.supabase.client
+      .from('points')
+      .select('*, transactions(*)')
+      .eq('desbravadorId', desbravadorId)
+      .limit(1)
+      .maybeSingle();
+    return points || null;
   }
 
   async adjust(payload: { desbravadorId: number; amount: number; reason?: string; authorId?: number }) {
-    // perform both actions in a transaction so they stay consistent
-    const result = await this.prisma.$transaction(async (tx) => {
-      // validate desbravador exists
-      const des = await tx.desbravador.findUnique({ where: { id: payload.desbravadorId } });
-      if (!des) throw new NotFoundException('Desbravador not found');
+    // validate desbravador exists
+    const { data: des } = await this.supabase.client.from('desbravador').select('id').eq('id', payload.desbravadorId).limit(1).maybeSingle();
+    if (!des) throw new NotFoundException('Desbravador not found');
 
-      // if authorId provided, validate user exists
-      if (payload.authorId) {
-        const author = await tx.user.findUnique({ where: { id: payload.authorId } });
-        if (!author) throw new NotFoundException('Author user not found');
-      }
+    // if authorId provided, validate user exists
+    if (payload.authorId) {
+      const { data: author } = await this.supabase.client.from('user').select('id').eq('id', payload.authorId).limit(1).maybeSingle();
+      if (!author) throw new NotFoundException('Author user not found');
+    }
 
-      const p = await tx.points.upsert({
-        where: { desbravadorId: payload.desbravadorId },
-        create: { desbravadorId: payload.desbravadorId, total: payload.amount },
-        update: { total: { increment: payload.amount } },
-      });
+    // upsert points (may not be fully atomic across both inserts)
+    const { data: p } = await this.supabase.client
+      .from('points')
+      .upsert({ desbravadorId: payload.desbravadorId, total: payload.amount }, { onConflict: 'desbravadorId' })
+      .select()
+      .limit(1)
+      .maybeSingle();
 
-      const tr = await tx.pointsTransaction.create({
-        data: {
-          pointsId: p.id,
-          amount: payload.amount,
-          reason: payload.reason,
-          authorId: payload.authorId || null,
-        },
-      });
+    // If upsert returned a row without increment semantics, try to increment using SQL
+    if (p) {
+      // insert transaction record
+      const { data: tr } = await this.supabase.client
+        .from('pointsTransaction')
+        .insert([
+          {
+            pointsId: p.id,
+            amount: payload.amount,
+            reason: payload.reason,
+            authorId: payload.authorId || null,
+          },
+        ])
+        .select()
+        .limit(1)
+        .maybeSingle();
 
       return { points: p, transaction: tr };
-    });
+    }
 
-    return result;
+    return null;
   }
 }

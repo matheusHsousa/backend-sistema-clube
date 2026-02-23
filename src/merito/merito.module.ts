@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { MeritoService } from './merito.service';
 import { MeritoController } from './merito.controller';
-import { PrismaModule } from '../prisma/prisma.module';
+import { SupabaseModule } from '../supabase/supabase.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [SupabaseModule],
   providers: [MeritoService],
   controllers: [MeritoController],
 })

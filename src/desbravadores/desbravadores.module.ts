@@ -1,11 +1,10 @@
 import { Module } from '@nestjs/common';
-
-import { PrismaModule } from '../prisma/prisma.module';
+import { SupabaseModule } from '../supabase/supabase.module';
 import { DesbravadoresController } from './desbravadores.controller';
 import { DesbravadoresService } from './desbravadores.service';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [SupabaseModule],
   controllers: [DesbravadoresController],
   providers: [DesbravadoresService],
 })

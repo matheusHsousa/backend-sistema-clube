@@ -2,12 +2,12 @@ import { Module } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { FirebaseModule } from '../firebase/firebase.module';
-import { PrismaModule } from 'src/prisma/prisma.module';
+import { SupabaseModule } from 'src/supabase/supabase.module';
 import { FirebaseAuthGuard } from './firebase-auth/firebase-auth.guard';
 import { RolesGuard } from './roles.guard';
 
 @Module({
-  imports: [FirebaseModule, PrismaModule],
+  imports: [FirebaseModule, SupabaseModule],
   controllers: [AuthController],
   providers: [AuthService, FirebaseAuthGuard, RolesGuard],
   exports: [AuthService, FirebaseAuthGuard, RolesGuard],
