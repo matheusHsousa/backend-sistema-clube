@@ -10,6 +10,31 @@ export class FirebaseService {
 
   constructor() {
     if (!admin.apps.length) {
+      // Suporte para fornecer o serviceAccount via ENV:
+      // - SERVICE_ACCOUNT_KEY_BASE64: conteúdo base64 do JSON
+      // - SERVICE_ACCOUNT_KEY_JSON: conteúdo JSON bruto
+      // Isso escreve um arquivo `serviceAccountKey.json` em `process.cwd()` e depois será usado
+      try {
+        const base64 = process.env.SERVICE_ACCOUNT_KEY_BASE64;
+        const rawJson = process.env.SERVICE_ACCOUNT_KEY_JSON;
+        if (base64 || rawJson) {
+          const target = path.resolve(process.cwd(), 'serviceAccountKey.json');
+          if (base64) {
+            const content = Buffer.from(base64, 'base64').toString('utf8');
+            fs.writeFileSync(target, content, { mode: 0o600 });
+          } else {
+            // rawJson está garantido como string quando chegamos aqui
+            fs.writeFileSync(target, rawJson as string, { mode: 0o600 });
+          }
+          this.logger.log(`serviceAccount escrito a partir de ENV em: ${target}`);
+          // garante compatibilidade com a lógica existente (SERVICE_ACCOUNT_KEY_PATH ou GOOGLE_APPLICATION_CREDENTIALS)
+          process.env.SERVICE_ACCOUNT_KEY_PATH = process.env.SERVICE_ACCOUNT_KEY_PATH || target;
+          process.env.GOOGLE_APPLICATION_CREDENTIALS = process.env.GOOGLE_APPLICATION_CREDENTIALS || target;
+        }
+      } catch (err) {
+        this.logger.error('Falha ao escrever serviceAccount a partir de ENV', err as any);
+      }
+
       // Permite fornecer o caminho do service account via variável de ambiente (útil em dev/CI)
       const envPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.SERVICE_ACCOUNT_KEY_PATH;
       // Inicializa explicitamente com o arquivo de service account
