@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import { Unidade } from '@prisma/client';
+// Prisma removed — Unidade previously came from Prisma client. Use string alias.
+type Unidade = string;
 
 @Injectable()
 export class StatsService {

@@ -1,7 +1,6 @@
 FROM node:18-bullseye-slim AS builder
 WORKDIR /app
 COPY package*.json ./
-COPY prisma ./prisma
 COPY tsconfig*.json ./
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates libssl1.1 \
@@ -23,10 +22,7 @@ RUN apt-get update \
 	&& rm -rf /var/lib/apt/lists/* \
 	&& npm ci --production
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
-# Copy generated Prisma client from builder (required at runtime)
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
+# (Prisma removed) no longer copying prisma artifacts
 ENV NODE_ENV=production
 EXPOSE 8080
 ENTRYPOINT ["/bin/sh", "-c"]
