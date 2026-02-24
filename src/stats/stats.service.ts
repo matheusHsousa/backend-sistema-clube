@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 // Prisma removed — Unidade previously came from Prisma client. Use string alias.
 type Unidade = string;
 
 @Injectable()
 export class StatsService {
+  private readonly logger = new Logger(StatsService.name);
   constructor(private supabase: SupabaseService) {}
 
   private getSundayEnd(date: Date) {
@@ -77,18 +78,58 @@ export class StatsService {
         desbravadoresPercent: []
       };
     }
-    const { data: classeEntity } = await this.supabase.client.from('classeEntity').select('*, requisitos(*)').eq('nome', classe).limit(1).maybeSingle();
+    let { data: classeEntity } = await this.supabase.client.from('classeEntity').select('*, requisitos(*)').eq('nome', classe).limit(1).maybeSingle();
+    // fallback: try case-insensitive match if exact name lookup fails
+    if (!classeEntity) {
+      const { data: classeEntityIlike } = await this.supabase.client
+        .from('classeEntity')
+        .select('*, requisitos(*)')
+        .ilike('nome', classe)
+        .limit(1)
+        .maybeSingle();
+      if (classeEntityIlike) classeEntity = classeEntityIlike;
+    }
+    if (!classeEntity) {
+      const { data: classeEntityLike } = await this.supabase.client
+        .from('classeEntity')
+        .select('*, requisitos(*)')
+        .ilike('nome', `%${classe}%`)
+        .limit(1)
+        .maybeSingle();
+      if (classeEntityLike) classeEntity = classeEntityLike;
+    }
 
     const { data: desbravadores } = await this.supabase.client.from('desbravador').select('id, name').eq('classe', classe).order('name', { ascending: true });
 
+    // ensure we know how many requisitos exist for this class; fall back to explicit query
+    let totalRequisitos = (classeEntity?.requisitos || []).length ?? 0;
+    if (!totalRequisitos && classeEntity?.id) {
+      const { data: reqsList } = await this.supabase.client.from('classeRequisito').select('id').eq('classeId', classeEntity.id);
+      totalRequisitos = (reqsList || []).length;
+    }
+    // If still zero (unexpected), try resolving classe -> classeEntity ids and count requisitos by those ids
+    if (!totalRequisitos) {
+      try {
+        const { data: classeMatches } = await this.supabase.client.from('classeEntity').select('id').ilike('nome', classe);
+        const ids = (classeMatches || []).map((c: any) => c.id);
+        if (ids.length > 0) {
+          const { data: reqsByIds } = await this.supabase.client.from('classeRequisito').select('id').in('classeId', ids);
+          totalRequisitos = (reqsByIds || []).length;
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    
+
     const { data: requisitosConcluidos } = await this.supabase.client.from('desbravadorRequisito').select('desbravadorId').in('desbravadorId', (desbravadores || []).map((d: any) => d.id));
+    
 
     const requisitosPorDesbravador = new Map<number, number>();
     for (const req of requisitosConcluidos || []) {
       requisitosPorDesbravador.set(req.desbravadorId, (requisitosPorDesbravador.get(req.desbravadorId) ?? 0) + 1);
     }
 
-    const totalRequisitos = (classeEntity?.requisitos || []).length ?? 0;
     const totalDesbravadores = (desbravadores || []).length;
     const itensTotal = totalRequisitos * totalDesbravadores;
     const itensConcluidos = (requisitosConcluidos || []).length;
