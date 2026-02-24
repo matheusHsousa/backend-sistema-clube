@@ -241,9 +241,17 @@ export class StatsService {
   }
 
   async adminProgressoClasses() {
-    const { data: classeEntities } = await this.supabase.client.from('classeEntity').select('*, requisitos(*)');
+    // fetch classe entities (avoid nested relation select which can fail if relation isn't registered)
+    const { data: classeEntities } = await this.supabase.client.from('classeEntity').select('*');
     const { data: desbravadores } = await this.supabase.client.from('desbravador').select('id, classe');
     const { data: requisitosCompletos } = await this.supabase.client.from('desbravadorRequisito').select('desbravadorId');
+
+    // fetch all classeRequisito to compute counts per classeId
+    const { data: allClasseRequisitos } = await this.supabase.client.from('classeRequisito').select('id, classeId');
+    const requisitosCountByClasse = new Map<number, number>();
+    for (const r of allClasseRequisitos || []) {
+      requisitosCountByClasse.set(r.classeId, (requisitosCountByClasse.get(r.classeId) ?? 0) + 1);
+    }
 
     const requisitosPorDesbravador = new Map<number, number>();
     for (const req of requisitosCompletos || []) {
@@ -255,7 +263,7 @@ export class StatsService {
     for (const classeEntity of (classeEntities || [])) {
       const nomeSqlite = classeEntity.nome;
       const desbravadoresDaClasse = (desbravadores || []).filter((d: any) => d.classe === nomeSqlite);
-      const totalRequisitos = (classeEntity.requisitos || []).length || 1;
+      const totalRequisitos = requisitosCountByClasse.get(classeEntity.id) || 1;
       let totalItemsFeitos = 0;
       let desbravadoresComItens = 0;
 
