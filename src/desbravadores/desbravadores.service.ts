@@ -57,9 +57,39 @@ export class DesbravadoresService {
   }
 
   async remove(id: number) {
-    const resp = await this.supabase.client.from('desbravador').delete().eq('id', id).select();
-    if ((resp as any).error) throw new InternalServerErrorException('Erro ao deletar desbravador');
-    const data = (resp as any).data;
-    return data ? data[0] : null;
+    try {
+      const client = this.supabase.client;
+
+      // delete points transactions -> points
+      const { data: points } = await client.from('points').select('id').eq('desbravadorId', id);
+      if (points && (points as any).length) {
+        const pIds = (points as any).map((p: any) => p.id).filter(Boolean);
+        if (pIds.length) {
+          await client.from('pointsTransaction').delete().in('pointsId', pIds);
+          await client.from('points').delete().in('id', pIds);
+        }
+      }
+
+      // delete textos -> atrasado
+      const { data: atrasados } = await client.from('atrasado').select('id').eq('desbravadorId', id);
+      if (atrasados && (atrasados as any).length) {
+        const aIds = (atrasados as any).map((a: any) => a.id).filter(Boolean);
+        if (aIds.length) {
+          await client.from('textoBiblico').delete().in('atrasadoId', aIds);
+          await client.from('atrasado').delete().in('id', aIds);
+        }
+      }
+
+      // delete requisitos
+      await client.from('desbravadorRequisito').delete().eq('desbravadorId', id);
+
+      // finally delete desbravador
+      const resp = await client.from('desbravador').delete().eq('id', id).select();
+      if ((resp as any).error) throw new InternalServerErrorException(`Erro ao deletar desbravador: ${((resp as any).error?.message) || 'unknown'}`);
+      const data = (resp as any).data;
+      return data ? data[0] : null;
+    } catch (err: any) {
+      throw new InternalServerErrorException(err?.message || 'Erro ao deletar desbravador');
+    }
   }
 }
