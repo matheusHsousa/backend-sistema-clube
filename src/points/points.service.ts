@@ -6,13 +6,23 @@ export class PointsService {
   constructor(private supabase: SupabaseService) {}
 
   async getByDesbravador(desbravadorId: number) {
-    const { data: points } = await this.supabase.client
-      .from('points')
-      .select('*, transactions(*)')
-      .eq('desbravadorId', desbravadorId)
-      .limit(1)
-      .maybeSingle();
-    return points || null;
+    try {
+      const { data: points, error } = await this.supabase.client
+        .from('points')
+        .select('*, pointsTransaction(*)')
+        .eq('desbravadorId', desbravadorId)
+        .limit(1)
+        .maybeSingle();
+
+      if (error) return null;
+      if (!points) return null;
+
+      // normalize transactions property for callers
+      const transactions = (points.pointsTransaction || []).slice();
+      return { ...points, transactions };
+    } catch (e) {
+      return null;
+    }
   }
 
   async adjust(payload: { desbravadorId: number; amount: number; reason?: string; authorId?: number }) {
@@ -26,34 +36,61 @@ export class PointsService {
       if (!author) throw new NotFoundException('Author user not found');
     }
 
-    // upsert points (may not be fully atomic across both inserts)
-    const { data: p } = await this.supabase.client
+    // read existing points row
+    const { data: existing, error: readError } = await this.supabase.client
       .from('points')
-      .upsert({ desbravadorId: payload.desbravadorId, total: payload.amount }, { onConflict: 'desbravadorId' })
+      .select('*')
+      .eq('desbravadorId', payload.desbravadorId)
+      .limit(1)
+      .maybeSingle();
+
+    if (readError) throw readError;
+
+    let pointsRow: any = existing;
+
+    const nowIso = new Date().toISOString();
+
+    if (existing) {
+      // update total by incrementing
+      const newTotal = (existing.total || 0) + payload.amount;
+      const { data: updated, error: updateError } = await this.supabase.client
+        .from('points')
+        .update({ total: newTotal, updatedAt: nowIso })
+        .eq('id', existing.id)
+        .select()
+        .limit(1)
+        .maybeSingle();
+      if (updateError) throw updateError;
+      pointsRow = updated;
+    } else {
+      // insert new points row
+      const { data: inserted, error: insertError } = await this.supabase.client
+        .from('points')
+        .insert([{ desbravadorId: payload.desbravadorId, total: payload.amount, updatedAt: nowIso }])
+        .select()
+        .limit(1)
+        .maybeSingle();
+      if (insertError) throw insertError;
+      pointsRow = inserted;
+    }
+
+    // insert transaction record referencing pointsRow.id
+    const { data: tr, error: trError } = await this.supabase.client
+      .from('pointsTransaction')
+      .insert([
+        {
+          pointsId: pointsRow.id,
+          amount: payload.amount,
+          reason: payload.reason,
+          authorId: payload.authorId || null,
+        },
+      ])
       .select()
       .limit(1)
       .maybeSingle();
 
-    // If upsert returned a row without increment semantics, try to increment using SQL
-    if (p) {
-      // insert transaction record
-      const { data: tr } = await this.supabase.client
-        .from('pointsTransaction')
-        .insert([
-          {
-            pointsId: p.id,
-            amount: payload.amount,
-            reason: payload.reason,
-            authorId: payload.authorId || null,
-          },
-        ])
-        .select()
-        .limit(1)
-        .maybeSingle();
+    if (trError) throw trError;
 
-      return { points: p, transaction: tr };
-    }
-
-    return null;
+    return { points: pointsRow, transaction: tr };
   }
 }

@@ -6,8 +6,10 @@ export class PointsController {
   constructor(private readonly pointsService: PointsService) {}
 
   @Get(':desbravadorId')
-  getPoints(@Param('desbravadorId', ParseIntPipe) desbravadorId: number) {
-    return this.pointsService.getByDesbravador(desbravadorId);
+  async getPoints(@Param('desbravadorId', ParseIntPipe) desbravadorId: number) {
+    const result = await this.pointsService.getByDesbravador(desbravadorId);
+    if (!result) return [];
+    return result;
   }
 
   @Post('adjust')
