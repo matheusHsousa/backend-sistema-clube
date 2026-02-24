@@ -1,5 +1,5 @@
 // backend/src/auth/auth.service.ts
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { FirebaseService } from '../firebase/firebase.service';
 
@@ -14,13 +14,12 @@ export class AuthService {
       return backendUser;
     } catch (err) {
       console.error('❌ Erro ao validar token Firebase:', err);
-      // Repassa o erro para o guard alcançar logs/response reais
-      throw err;
+      // Normaliza o erro para um 401 Unauthorized em vez de propagar erro interno
+      throw new UnauthorizedException('Token Firebase inválido');
     }
   }
 
   async handleUser(firebaseUser: any) {
-    console.log('🔥 Firebase user recebido:', firebaseUser);
 
     try {
       const { data: existing } = await this.supabase.client

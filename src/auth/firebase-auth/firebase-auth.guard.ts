@@ -15,7 +15,6 @@ export class FirebaseAuthGuard implements CanActivate {
 
     const token = authHeader.replace('Bearer ', '').trim();
     try {
-      this.logger.debug('Validando token recebido (oculto)');
       const firebaseUser = await this.authService.validateUser(token);
 
       if (!firebaseUser) {
@@ -34,7 +33,8 @@ export class FirebaseAuthGuard implements CanActivate {
       request.user = firebaseUser;
     } catch (err) {
       this.logger.error('Erro ao validar token', err as any);
-      throw err;
+      // Normaliza o erro para 401 Unauthorized para evitar 500 Internal Server Error
+      throw new UnauthorizedException('Token inválido');
     }
 
 
