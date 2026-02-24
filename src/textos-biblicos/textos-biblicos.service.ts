@@ -64,12 +64,56 @@ export class TextosBiblicosService {
   }
 
   async enviarTexto(atrasadoId: number, imagemUrl: string) {
-    const { data } = await this.supabase.client
+
+    // First try exact URL match
+    const { data: existingExact } = await this.supabase.client
+      .from('textoBiblico')
+      .select('*, atrasado(user(*), desbravador(*))')
+      .eq('atrasadoId', atrasadoId)
+      .eq('imagemUrl', imagemUrl)
+      .limit(1)
+      .maybeSingle();
+
+    if (existingExact) {
+      return existingExact;
+    }
+
+    // Then try base URL (strip query string) to handle signed URLs differences
+    const imagemBase = imagemUrl ? imagemUrl.split('?')[0] : imagemUrl;
+    if (imagemBase) {
+      const { data: existingBase } = await this.supabase.client
+        .from('textoBiblico')
+        .select('*, atrasado(user(*), desbravador(*))')
+        .eq('atrasadoId', atrasadoId)
+        .like('imagemUrl', `${imagemBase}%`)
+        .limit(1)
+        .maybeSingle();
+      if (existingBase) {
+        return existingBase;
+      }
+    }
+
+    // Insert new record; if duplicate occurs due to race, try to fetch existing and return
+    const { data, error } = await this.supabase.client
       .from('textoBiblico')
       .insert([{ atrasadoId, imagemUrl }])
       .select('*, atrasado(user(*), desbravador(*))')
       .limit(1)
       .maybeSingle();
+
+    if (error) {
+      this.logger.warn('enviarTexto insert error', error as any);
+      // try to recover returning any existing record matching either exact or base
+      const { data: existingRetry } = await this.supabase.client
+        .from('textoBiblico')
+        .select('*, atrasado(user(*), desbravador(*))')
+        .eq('atrasadoId', atrasadoId)
+        .or(`imagemUrl.eq.${imagemUrl},imagemUrl.like.${imagemBase}%`)
+        .limit(1)
+        .maybeSingle();
+      if (existingRetry) return existingRetry;
+      throw error;
+    }
 
     return data;
   }
