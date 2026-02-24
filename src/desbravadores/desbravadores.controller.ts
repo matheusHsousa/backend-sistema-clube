@@ -10,6 +10,11 @@ export class DesbravadoresController {
     return this.service.create(body);
   }
 
+  @Post('import')
+  importMany(@Body() body: any[]) {
+    return this.service.importMany(body || []);
+  }
+
   @Get()
   findAll(@Query() query: { unidade?: string; classe?: string }) {
     return this.service.findAll(query);

@@ -5,6 +5,29 @@ import { SupabaseService } from '../supabase/supabase.service';
 export class DesbravadoresService {
   constructor(private supabase: SupabaseService) {}
 
+  private parseDateString(value?: string | Date | null): Date | null {
+    if (!value && value !== '') return null;
+    if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+    const s = String(value).trim();
+    if (!s) return null;
+
+    // Try native parse first (ISO or other recognized formats)
+    const iso = new Date(s);
+    if (!Number.isNaN(iso.getTime())) return iso;
+
+    // Support dd/mm/yyyy or d/m/yyyy and variants with '-'
+    const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (m) {
+      const day = parseInt(m[1], 10);
+      const month = parseInt(m[2], 10) - 1;
+      const year = parseInt(m[3], 10);
+      const d = new Date(year, month, day);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+
+    return null;
+  }
+
   async create(data: { name: string; birthDate?: string; unidade: string; classe: string }) {
     if (!data || !data.name || !data.unidade || !data.classe) {
       throw new BadRequestException('Campos obrigatórios: name, unidade, classe');
@@ -16,8 +39,8 @@ export class DesbravadoresService {
       classe: data.classe,
     };
     if (data.birthDate) {
-      const d = new Date(data.birthDate);
-      if (Number.isNaN(d.getTime())) throw new BadRequestException('birthDate inválida');
+      const d = this.parseDateString(data.birthDate);
+      if (!d) throw new BadRequestException('birthDate inválida');
       payload.birthDate = d;
     }
 
@@ -47,13 +70,43 @@ export class DesbravadoresService {
   async update(id: number, data: { name?: string; birthDate?: string; unidade?: string; classe?: string }) {
     const payload: any = {};
     if (data.name !== undefined) payload.name = data.name;
-    if (data.birthDate !== undefined) payload.birthDate = data.birthDate ? new Date(data.birthDate) : null;
+    if (data.birthDate !== undefined) {
+      if (data.birthDate === '' || data.birthDate === null) {
+        payload.birthDate = null;
+      } else {
+        const d = this.parseDateString(data.birthDate as any);
+        if (!d) throw new BadRequestException('birthDate inválida');
+        payload.birthDate = d;
+      }
+    }
     if (data.unidade !== undefined) payload.unidade = data.unidade;
     if (data.classe !== undefined) payload.classe = data.classe;
 
     const resp = await this.supabase.client.from('desbravador').update(payload).eq('id', id).select().limit(1).maybeSingle();
     if ((resp as any).error) throw new InternalServerErrorException('Erro ao atualizar desbravador');
     return (resp as any).data || null;
+  }
+
+  async importMany(items: any[]) {
+    if (!Array.isArray(items)) throw new BadRequestException('Payload deve ser um array');
+
+    const payloads: any[] = [];
+    for (const it of items) {
+      if (!it || !it.name || !it.unidade || !it.classe) {
+        // skip invalid rows or throw depending on desired behavior; here we fail fast
+        throw new BadRequestException('Cada item precisa ter name, unidade e classe');
+      }
+      const p: any = { name: it.name, unidade: it.unidade, classe: it.classe };
+      if (it.birthDate) {
+        const d = this.parseDateString(it.birthDate);
+        if (d) p.birthDate = d;
+      }
+      payloads.push(p);
+    }
+
+    const resp = await this.supabase.client.from('desbravador').insert(payloads).select();
+    if ((resp as any).error) throw new InternalServerErrorException(`Erro ao importar desbravadores: ${((resp as any).error?.message) || 'unknown'}`);
+    return (resp as any).data || [];
   }
 
   async remove(id: number) {
