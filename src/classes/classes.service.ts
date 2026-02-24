@@ -1,9 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class ClassesService {
-  private readonly logger = new Logger(ClassesService.name);
   constructor(private supabase: SupabaseService) {}
 
   async getRequisitosByClass(classeId: number, desbravadorId?: number) {
@@ -25,8 +24,7 @@ export class ClassesService {
 
     if (desbravadorId) progressoQuery = progressoQuery.eq('desbravadorId', desbravadorId);
 
-    const { data: progresso, error: progressoError } = await progressoQuery;
-    if (progressoError) this.logger.warn('getRequisitosByClass progresso query error', progressoError as any);
+    const { data: progresso } = await progressoQuery;
     let progressoRows = progresso || [];
 
     // If no rows found, retry with stringified requisito IDs (handles text FKs)
@@ -38,8 +36,7 @@ export class ClassesService {
           .select('*, desbravador(*), instrutor:user(*)')
           .in('requisitoId', stringIds);
         if (desbravadorId) retryQuery = retryQuery.eq('desbravadorId', desbravadorId);
-        const { data: progresso2, error: progresso2Error } = await retryQuery;
-        if (progresso2Error) this.logger.warn('getRequisitosByClass retry progresso query error', progresso2Error as any);
+        const { data: progresso2 } = await retryQuery;
         if (progresso2) progressoRows = progresso2;
       } catch (e) {
         // ignore retry errors
@@ -55,9 +52,7 @@ export class ClassesService {
       map.set(key, arr);
     }
 
-    this.logger.debug(`getRequisitosByClass classeId=${classeId} desbravadorId=${desbravadorId} requisitoIds=${JSON.stringify(
-      requisitoIds,
-    )} progressoRows=${progressoRows.length}`);
+    
 
     return reqs.map((r: any) => ({ ...r, progresso: map.get(Number(r.id)) || [] }));
   }
