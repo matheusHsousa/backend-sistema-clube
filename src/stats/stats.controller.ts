@@ -25,6 +25,11 @@ export class StatsController {
     return this.service.adminOverview(start, end);
   }
 
+  @Get('admin/units-points')
+  async adminUnitsPoints(@Query('start') start?: string, @Query('end') end?: string) {
+    return this.service.adminPointsByUnit(start, end);
+  }
+
   @Get('admin/desbravadores-unidade-semanal')
   async adminDesbravadoresUnidadeSemanal(@Query('weeks') weeks?: string) {
     return this.service.adminDesbravadoresUnidadeSemanal(Number(weeks) || 12);

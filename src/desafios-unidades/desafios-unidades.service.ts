@@ -101,7 +101,18 @@ export class DesafiosUnidadesService {
 
     const submittedIds = new Set((subs || []).map((s: any) => String(s.desafiounidadeid)));
 
-    return (allChallenges || []).filter((c: any) => !submittedIds.has(String(c.id)));
+    const now = new Date();
+
+    const notExpired = (c: any) => {
+      const raw = c.dueDate ?? c.due_date ?? c.duedate ?? null;
+      if (!raw) return true; // no due date => still available
+      const d = new Date(raw);
+      return !isNaN(d.getTime()) ? d >= now : true;
+    };
+
+    return (allChallenges || [])
+      .filter((c: any) => !submittedIds.has(String(c.id)))
+      .filter((c: any) => notExpired(c));
   }
 
   async approveSubmission(submissionId: string, nota: number, aprovadorId?: string) {
@@ -140,5 +151,98 @@ export class DesafiosUnidadesService {
     }
 
     return updated;
+  }
+
+  async rejectSubmission(submissionId: string) {
+    const { data: sub } = await this.supabase.client
+      .from('desafioUnidadeSubmissao')
+      .select('*')
+      .eq('id', submissionId)
+      .limit(1)
+      .maybeSingle();
+    if (!sub) throw new NotFoundException('Submission not found');
+
+    // attempt to remove associated file from Supabase storage if present
+    if (sub.fileurl) {
+      try {
+        // extract path after the bucket name 'desafios-unidades/'
+        const m = String(sub.fileurl).match(/desafios-unidades\/(.+?)(\?|$)/);
+        if (m && m[1]) {
+          const objectPath = decodeURIComponent(m[1]);
+          const { error: remErr } = await this.supabase.client.storage.from('desafios-unidades').remove([objectPath]);
+          if (remErr) {
+            // log but don't fail the whole operation for storage removal errors
+            // eslint-disable-next-line no-console
+            console.warn('Failed to remove storage object for submission', submissionId, remErr);
+          }
+        }
+      } catch (e) {
+        // ignore storage deletion errors
+        // eslint-disable-next-line no-console
+        console.warn('Error while attempting to remove storage file for submission', submissionId, e);
+      }
+    }
+
+    const { error } = await this.supabase.client
+      .from('desafioUnidadeSubmissao')
+      .delete()
+      .eq('id', submissionId);
+    if (error) throw error;
+
+    return { success: true };
+  }
+
+  async update(id: string | number, payload: any) {
+    const { data: existing } = await this.supabase.client
+      .from('desafioUnidade')
+      .select('*')
+      .eq('id', id)
+      .limit(1)
+      .maybeSingle();
+    if (!existing) throw new NotFoundException('Desafio não encontrado');
+
+    const { data, error } = await this.supabase.client
+      .from('desafioUnidade')
+      .update({ ...payload })
+      .eq('id', id)
+      .select()
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  }
+
+  async delete(id: string | number) {
+    const { data: existing } = await this.supabase.client
+      .from('desafioUnidade')
+      .select('*')
+      .eq('id', id)
+      .limit(1)
+      .maybeSingle();
+    if (!existing) throw new NotFoundException('Desafio não encontrado');
+
+    // remove pontos relacionados a este desafio
+    const { error: pointsErr } = await this.supabase.client
+      .from('unit_points')
+      .delete()
+      .eq('related_challenge_id', id);
+    if (pointsErr) throw pointsErr;
+
+    // remove submissões relacionadas a este desafio
+    const { error: subsErr } = await this.supabase.client
+      .from('desafioUnidadeSubmissao')
+      .delete()
+      .eq('desafiounidadeid', id);
+    if (subsErr) throw subsErr;
+
+    const { data, error } = await this.supabase.client
+      .from('desafioUnidade')
+      .delete()
+      .eq('id', id)
+      .select()
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
   }
 }

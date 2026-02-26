@@ -175,7 +175,11 @@ export class StatsService {
 
     const unitsAvg = Object.keys(unitsMap).map((u) => ({ unidade: u, avg: unitsMap[u].count ? unitsMap[u].sum / unitsMap[u].count : 0 }));
 
-    return { points: points || [], best, worst, unitsAvg };
+    // also fetch unit-level points (from unit_points table) for the requested unidade
+    const { data: unitPoints } = await this.supabase.client.from('unit_points').select('*').eq('unitid', unitVal);
+    const unitTotal = (unitPoints || []).reduce((acc: number, row: any) => acc + (Number(row.points) || 0), 0);
+
+    return { points: points || [], best, worst, unitsAvg, unitPoints: unitPoints || [], total: unitTotal };
   }
 
   // Admin: stats por unidade e classe
@@ -187,8 +191,61 @@ export class StatsService {
     return { aprovados: aprovadosCount, pts: pts || [] };
   }
 
+  // Admin: total de pontos por unidade (soma de `unit_points` + soma dos `points` dos desbravadores)
+  async adminPointsByUnit(start?: string, end?: string) {
+    // fetch unit-level points
+    let upQuery: any = this.supabase.client.from('unit_points').select('unitid, points, created_at');
+    if (start) upQuery = upQuery.gte('created_at', new Date(start).toISOString());
+    if (end) upQuery = upQuery.lte('created_at', new Date(end).toISOString());
+    const { data: unitPoints } = await upQuery;
+
+    const unitPointsMap = new Map<string, number>();
+    for (const row of unitPoints || []) {
+      const u = String(row.unitid || '');
+      unitPointsMap.set(u, (unitPointsMap.get(u) || 0) + (Number(row.points) || 0));
+    }
+
+    // fetch desbravadores to know their unidade
+    const { data: desbravadores } = await this.supabase.client.from('desbravador').select('id, unidade');
+    const desToUnit = new Map<number, string>();
+    for (const d of desbravadores || []) desToUnit.set(d.id, String(d.unidade || ''));
+
+    // fetch points per desbravador
+    const { data: points } = await this.supabase.client.from('points').select('desbravadorId, total');
+    const unitFromDesMap = new Map<string, { sum: number; count: number }>();
+    for (const p of points || []) {
+      const did = p.desbravadorId;
+      const unit = desToUnit.get(did) || '';
+      const cur = unitFromDesMap.get(unit) || { sum: 0, count: 0 };
+      cur.sum += Number(p.total) || 0;
+      cur.count += 1;
+      unitFromDesMap.set(unit, cur);
+    }
+
+    // build union of units
+    const units = new Set<string>();
+    for (const u of unitPointsMap.keys()) units.add(u);
+    for (const u of unitFromDesMap.keys()) units.add(u);
+    for (const d of desbravadores || []) units.add(String(d.unidade || ''));
+
+    const result = Array.from(units).map((u) => {
+      const ptsUnit = unitPointsMap.get(u) || 0;
+      const desInfo = unitFromDesMap.get(u) || { sum: 0, count: 0 };
+      return {
+        unidade: u,
+        pointsUnit: ptsUnit,
+        pointsDesbravadores: desInfo.sum,
+        desbravadoresCount: desInfo.count,
+        total: ptsUnit + desInfo.sum,
+      };
+    });
+
+    result.sort((a, b) => b.total - a.total);
+    return result;
+  }
+
   async adminDesbravadoresUnidadeSemanal(weeks = 12) {
-    const { data: desbravadores } = await this.supabase.client.from('desbravador').select('unidade, createdAt').order('createdAt', { ascending: true });
+    const { data: desbravadores } = await this.supabase.client.from('desbravador').select('unidade, created_at').order('created_at', { ascending: true });
 
     // Derive units from desbravadores data (Prisma enum removed)
     const unidades: string[] = Array.from(new Set((desbravadores || []).map((d: any) => String(d.unidade || ''))));
@@ -212,7 +269,7 @@ export class StatsService {
     const rows = sundayPoints.map((sunday) => {
       const values = unidades.reduce((acc: Record<string, number>, unidade: string) => ({ ...acc, [unidade]: 0 }), {} as Record<string, number>);
       for (const d of desbravadores || []) {
-        if (new Date(d.createdAt) <= sunday) {
+        if (new Date(d.created_at) <= sunday) {
           values[d.unidade] = (values[d.unidade] || 0) + 1;
         }
       }
@@ -298,7 +355,7 @@ export class StatsService {
     for (const transacao of transacoes || []) {
       const desbravaId = transacao.points?.desbravadorId;
       const amount = transacao.amount;
-      const dataExtraida = (transacao.reason ? this.extractDateFromReason(transacao.reason) : null) || new Date(transacao.createdAt);
+      const dataExtraida = (transacao.reason ? this.extractDateFromReason(transacao.reason) : null) || new Date(transacao.created_at);
       acumuladoPorDesbravador.set(desbravaId, (acumuladoPorDesbravador.get(desbravaId) ?? 0) + amount);
       if (!transacoesPorDesbravador.has(desbravaId)) transacoesPorDesbravador.set(desbravaId, []);
       transacoesPorDesbravador.get(desbravaId)!.push({ data: dataExtraida, amount });
@@ -341,7 +398,7 @@ export class StatsService {
     for (const transacao of transacoes || []) {
       const desbravaId = transacao.points?.desbravadorId;
       const amount = transacao.amount;
-      const dataExtraida = (transacao.reason ? this.extractDateFromReason(transacao.reason) : null) || new Date(transacao.createdAt);
+      const dataExtraida = (transacao.reason ? this.extractDateFromReason(transacao.reason) : null) || new Date(transacao.created_at);
       acumuladoPorDesbravador.set(desbravaId, (acumuladoPorDesbravador.get(desbravaId) ?? 0) + amount);
       if (!transacoesPorDesbravador.has(desbravaId)) transacoesPorDesbravador.set(desbravaId, []);
       transacoesPorDesbravador.get(desbravaId)!.push({ data: dataExtraida, amount });
@@ -424,7 +481,7 @@ export class StatsService {
     const transacoesPorDesbravadorPorData = new Map<number, Set<string>>();
     for (const transacao of transacoes || []) {
       const desbravaId = transacao.points?.desbravadorId;
-      const dataExtraida = (transacao.reason ? this.extractDateFromReason(transacao.reason) : null) || new Date(transacao.createdAt);
+      const dataExtraida = (transacao.reason ? this.extractDateFromReason(transacao.reason) : null) || new Date(transacao.created_at);
       const dataKey = this.formatDateKey(dataExtraida);
       if (!transacoesPorDesbravadorPorData.has(desbravaId)) transacoesPorDesbravadorPorData.set(desbravaId, new Set());
       transacoesPorDesbravadorPorData.get(desbravaId)!.add(dataKey);

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards, Req } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards, Req, Put, Delete } from '@nestjs/common';
 import { DesafiosUnidadesService } from './desafios-unidades.service';
 import { FirebaseAuthGuard } from '../auth/firebase-auth/firebase-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -92,5 +92,26 @@ export class DesafiosUnidadesController {
   async approveSubmission(@Param('submissionId') submissionId: string, @Body() body: { nota: number; aprovadorId?: string }, @Req() req: any) {
     const aprovadorId = body.aprovadorId || req.user?.id || null;
     return this.service.approveSubmission(submissionId, body.nota, aprovadorId);
+  }
+
+  @Post('submissions/:submissionId/reject')
+  @UseGuards(FirebaseAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  async rejectSubmission(@Param('submissionId') submissionId: string) {
+    return this.service.rejectSubmission(submissionId);
+  }
+
+  @Put(':id')
+  @UseGuards(FirebaseAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  async update(@Param('id') id: string, @Body() body: any) {
+    return this.service.update(id, body);
+  }
+
+  @Delete(':id')
+  @UseGuards(FirebaseAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  async remove(@Param('id') id: string) {
+    return this.service.delete(id);
   }
 }
