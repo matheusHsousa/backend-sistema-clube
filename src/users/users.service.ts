@@ -8,7 +8,7 @@ export class UsersService {
   async findAll() {
     const { data } = await this.supabase.client
       .from('user')
-      .select('id, email, name, roles, unidade, classe, createdAt')
+      .select('id, email, name, avatarUrl, roles, unidade, classe, createdAt')
       .order('email', { ascending: true });
     return data || [];
   }
@@ -17,7 +17,7 @@ export class UsersService {
     // roles is stored as text[] in Postgres; use cs/contains operator via filter
     const { data } = await this.supabase.client
       .from('user')
-      .select('id, email, name, roles, unidade, classe, createdAt')
+      .select('id, email, name, avatarUrl, roles, unidade, classe, createdAt')
       .contains('roles', [role])
       .order('email', { ascending: true });
     return data || [];
