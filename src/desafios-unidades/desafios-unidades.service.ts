@@ -15,7 +15,14 @@ export class DesafiosUnidadesService {
   }
 
   async create(payload: any) {
-    const insert = { ...payload };
+    // Validate payload
+    if (!payload || typeof payload !== 'object') throw new BadRequestException('Payload inválido');
+    const title = String(payload.title ?? '').trim();
+    const description = String(payload.description ?? '').trim();
+    if (!title) throw new BadRequestException('Título é obrigatório');
+    if (!description) throw new BadRequestException('Descrição é obrigatória');
+
+    const insert = { ...payload, title, description };
     const { data, error } = await this.supabase.client.from('desafioUnidade').insert([insert]).select().limit(1).maybeSingle();
     if (error) throw error;
     return data;
@@ -200,6 +207,21 @@ export class DesafiosUnidadesService {
       .limit(1)
       .maybeSingle();
     if (!existing) throw new NotFoundException('Desafio não encontrado');
+
+    // basic validation: reject empty payload
+    if (!payload || typeof payload !== 'object' || Object.keys(payload).length === 0) {
+      throw new BadRequestException('Payload vazio');
+    }
+    if ('title' in payload) {
+      const t = String(payload.title ?? '').trim();
+      if (!t) throw new BadRequestException('Título é obrigatório');
+      payload.title = t;
+    }
+    if ('description' in payload) {
+      const d = String(payload.description ?? '').trim();
+      if (!d) throw new BadRequestException('Descrição é obrigatória');
+      payload.description = d;
+    }
 
     const { data, error } = await this.supabase.client
       .from('desafioUnidade')
