@@ -43,17 +43,9 @@ export class SupabaseUploadService {
       throw new InternalServerErrorException(error.message || 'Upload error');
     }
 
-    // Retorna uma URL assinada para garantir acesso imediato mesmo com bucket privado
-    const { data: signedData, error: signedError } = await supabase.storage.from('avatars').createSignedUrl(path, 60 * 60);
-    if (signedError) {
-      // eslint-disable-next-line no-console
-      console.error('Supabase createSignedUrl error:', signedError);
-      // Fallback: tenta retornar publicUrl
-      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
-      return data?.publicUrl ?? null;
-    }
-
-    return signedData?.signedUrl ?? null;
+    // Retorna a URL pública do objeto (bucket deve ser público)
+    const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+    return data?.publicUrl ?? null;
   }
 
   async uploadTexto(atrasadoId: string, buffer: Buffer, filename: string, mime: string) {
@@ -86,14 +78,9 @@ export class SupabaseUploadService {
         }
       }
 
-      const { data: signedData, error: signedError } = await supabase.storage.from('textos-biblicos').createSignedUrl(path, 60 * 60);
-      if (signedError) {
-        this.logger.warn('createSignedUrl failed, falling back to publicUrl', signedError);
-        const { data } = supabase.storage.from('textos-biblicos').getPublicUrl(path);
-        return data?.publicUrl ?? null;
-      }
-
-      return signedData?.signedUrl ?? null;
+      // Retorna URL pública (bucket público)
+      const { data: pub } = supabase.storage.from('textos-biblicos').getPublicUrl(path);
+      return pub?.publicUrl ?? null;
     } catch (e) {
       // fallback: try upload directly
       const { error } = await supabase.storage.from('textos-biblicos').upload(path, buffer, {
@@ -155,14 +142,9 @@ export class SupabaseUploadService {
         }
       }
 
-      const { data: signedData, error: signedError } = await supabase.storage.from('desafios-unidades').createSignedUrl(path, 60 * 60);
-      if (signedError) {
-        this.logger.warn('createSignedUrl failed, falling back to publicUrl', signedError);
-        const { data } = supabase.storage.from('desafios-unidades').getPublicUrl(path);
-        return data?.publicUrl ?? null;
-      }
-
-      return signedData?.signedUrl ?? null;
+      // Retorna URL pública (bucket público)
+      const { data: pub } = supabase.storage.from('desafios-unidades').getPublicUrl(path);
+      return pub?.publicUrl ?? null;
     } catch (e) {
       // fallback: try upload directly
       const { error } = await supabase.storage.from('desafios-unidades').upload(path, buffer, {
@@ -174,8 +156,8 @@ export class SupabaseUploadService {
         console.error('Supabase storage upload error (fallback):', error);
         throw new InternalServerErrorException(error.message || 'Upload error');
       }
-      const { data: signedData } = await supabase.storage.from('desafios-unidades').createSignedUrl(path, 60 * 60);
-      return signedData?.signedUrl ?? null;
+      const { data: pub } = supabase.storage.from('desafios-unidades').getPublicUrl(path);
+      return pub?.publicUrl ?? null;
     }
   }
 
