@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { PushService } from '../push/push.service';
 
 @Injectable()
 export class DesafiosUnidadesService {
-  constructor(private supabase: SupabaseService) {}
+  constructor(private supabase: SupabaseService, private pushService: PushService) {}
 
   async all() {
     const { data, error } = await this.supabase.client
@@ -25,6 +26,20 @@ export class DesafiosUnidadesService {
     const insert = { ...payload, title, description };
     const { data, error } = await this.supabase.client.from('desafioUnidade').insert([insert]).select().limit(1).maybeSingle();
     if (error) throw error;
+
+    // notify conselheiros via push (if configured)
+    try {
+      await this.pushService.notifyRole('CONSELHEIRO', {
+        title: 'Novo desafio de unidade',
+        body: title,
+        data: { id: data?.id ?? null },
+      });
+    } catch (e) {
+      // don't block create on notification errors
+      // eslint-disable-next-line no-console
+      console.warn('Push notification failed', e);
+    }
+
     return data;
   }
 

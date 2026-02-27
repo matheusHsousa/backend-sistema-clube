@@ -12,10 +12,11 @@ import { StatsModule } from './stats/stats.module';
 import { AtrasadosModule } from './atrasados/atrasados.module';
 import { TextosBiblicosModule } from './textos-biblicos/textos-biblicos.module';
 import { SupabaseUploadModule } from './supabase-upload/supabase-upload.module';
+import { PushModule } from './push/push.module';
 import { MeritoModule } from './merito/merito.module';
 
 @Module({
-  imports: [AuthModule, SupabaseModule, DesafiosUnidadesModule, DesbravadoresModule, UsersModule, ClassesModule, PointsModule, StatsModule, AtrasadosModule, TextosBiblicosModule, SupabaseUploadModule, MeritoModule],
+  imports: [AuthModule, SupabaseModule, DesafiosUnidadesModule, DesbravadoresModule, UsersModule, ClassesModule, PointsModule, StatsModule, AtrasadosModule, TextosBiblicosModule, SupabaseUploadModule, MeritoModule, PushModule],
   controllers: [AppController],
   providers: [AppService],
 })
