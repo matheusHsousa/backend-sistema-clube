@@ -31,6 +31,10 @@ export class UsersService {
     return this.findByRole('CONSELHEIRO');
   }
 
+  async findCapelania() {
+    return this.findByRole('CAPELANIA');
+  }
+
   async update(id: number, data: { name?: string; roles?: string[]; unidade?: string | null; classe?: string | null }) {
     const { data: updated } = await this.supabase.client.from('user').update(data).eq('id', id).select().limit(1).maybeSingle();
     return updated;

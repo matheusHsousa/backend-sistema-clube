@@ -29,6 +29,13 @@ export class UsersController {
     return this.usersService.findConselheiros();
   }
 
+  @Get('capelania')
+  @UseGuards(FirebaseAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  findCapelania() {
+    return this.usersService.findCapelania();
+  }
+
   @Put('me')
   @UseGuards(FirebaseAuthGuard)
   updateMyProfile(
