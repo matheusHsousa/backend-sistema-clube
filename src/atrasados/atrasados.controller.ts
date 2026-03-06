@@ -32,18 +32,31 @@ export class AtrasadosController {
     @Query('userId') userId?: string,
     @Query('desbravadorId') desbravadorId?: string
   ) {
+    // Validate that at least one filter is provided
+    if (!data && !userId && !desbravadorId) {
+      throw new (require('@nestjs/common').BadRequestException)('At least one filter is required');
+    }
+
     const filtro: any = {};
 
     if (data) {
-      filtro.data = new Date(data);
+      const d = new Date(data);
+      if (Number.isNaN(d.getTime())) {
+        throw new (require('@nestjs/common').BadRequestException)('Invalid date');
+      }
+      filtro.data = d;
     }
 
     if (userId) {
-      filtro.userId = Number(userId);
+      const n = Number(userId);
+      if (!Number.isFinite(n)) throw new (require('@nestjs/common').BadRequestException)('userId must be a number');
+      filtro.userId = n;
     }
 
     if (desbravadorId) {
-      filtro.desbravadorId = Number(desbravadorId);
+      const n = Number(desbravadorId);
+      if (!Number.isFinite(n)) throw new (require('@nestjs/common').BadRequestException)('desbravadorId must be a number');
+      filtro.desbravadorId = n;
     }
 
     return this.atrasadosService.listarAtrasados(filtro);

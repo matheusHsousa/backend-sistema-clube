@@ -355,7 +355,9 @@ export class StatsService {
     for (const transacao of transacoes || []) {
       const desbravaId = transacao.points?.desbravadorId;
       const amount = transacao.amount;
-      const dataExtraida = (transacao.reason ? this.extractDateFromReason(transacao.reason) : null) || new Date(transacao.created_at);
+      const dataExtraida = (transacao.sundayDate ? new Date(transacao.sundayDate) : null)
+        || (transacao.reason ? this.extractDateFromReason(transacao.reason) : null)
+        || new Date(transacao.created_at);
       acumuladoPorDesbravador.set(desbravaId, (acumuladoPorDesbravador.get(desbravaId) ?? 0) + amount);
       if (!transacoesPorDesbravador.has(desbravaId)) transacoesPorDesbravador.set(desbravaId, []);
       transacoesPorDesbravador.get(desbravaId)!.push({ data: dataExtraida, amount });
@@ -398,7 +400,9 @@ export class StatsService {
     for (const transacao of transacoes || []) {
       const desbravaId = transacao.points?.desbravadorId;
       const amount = transacao.amount;
-      const dataExtraida = (transacao.reason ? this.extractDateFromReason(transacao.reason) : null) || new Date(transacao.created_at);
+      const dataExtraida = (transacao.sundayDate ? new Date(transacao.sundayDate) : null)
+        || (transacao.reason ? this.extractDateFromReason(transacao.reason) : null)
+        || new Date(transacao.created_at);
       acumuladoPorDesbravador.set(desbravaId, (acumuladoPorDesbravador.get(desbravaId) ?? 0) + amount);
       if (!transacoesPorDesbravador.has(desbravaId)) transacoesPorDesbravador.set(desbravaId, []);
       transacoesPorDesbravador.get(desbravaId)!.push({ data: dataExtraida, amount });
@@ -481,7 +485,9 @@ export class StatsService {
     const transacoesPorDesbravadorPorData = new Map<number, Set<string>>();
     for (const transacao of transacoes || []) {
       const desbravaId = transacao.points?.desbravadorId;
-      const dataExtraida = (transacao.reason ? this.extractDateFromReason(transacao.reason) : null) || new Date(transacao.created_at);
+      const dataExtraida = (transacao.sundayDate ? new Date(transacao.sundayDate) : null)
+        || (transacao.reason ? this.extractDateFromReason(transacao.reason) : null)
+        || new Date(transacao.created_at);
       const dataKey = this.formatDateKey(dataExtraida);
       if (!transacoesPorDesbravadorPorData.has(desbravaId)) transacoesPorDesbravadorPorData.set(desbravaId, new Set());
       transacoesPorDesbravadorPorData.get(desbravaId)!.add(dataKey);
