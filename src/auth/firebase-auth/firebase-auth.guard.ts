@@ -28,11 +28,9 @@ export class FirebaseAuthGuard implements CanActivate {
         email: firebaseUser.email,
         roles: firebaseUser.roles,
       };
-      this.logger.debug(`Usuário validado pelo AuthService: ${JSON.stringify(info)}`);
 
       request.user = firebaseUser;
     } catch (err) {
-      this.logger.error('Erro ao validar token', err as any);
       // Normaliza o erro para 401 Unauthorized para evitar 500 Internal Server Error
       throw new UnauthorizedException('Token inválido');
     }

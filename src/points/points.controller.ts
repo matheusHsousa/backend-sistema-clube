@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, Patch } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, Patch, UseGuards, Req, BadRequestException } from '@nestjs/common';
+import { FirebaseAuthGuard } from 'src/auth/firebase-auth/firebase-auth.guard';
 import { PointsService } from './points.service';
 
 @Controller('points')
@@ -6,9 +7,20 @@ export class PointsController {
   constructor(private readonly pointsService: PointsService) {}
 
   @Get('transactions')
-  async listTransactions(@Query() query: { desbravadorId?: string; sundayDate?: string; unidade?: string }) {
+  @UseGuards(FirebaseAuthGuard)
+  async listTransactions(
+    @Query() query: { desbravadorId?: string; sundayDate?: string; unidade?: string },
+    @Req() req: any,
+  ) {
+    // require sundayDate to avoid broad queries
+    if (!query.sundayDate) {
+      throw new BadRequestException('Informe o parâmetro sundayDate (obrigatório)');
+    }
+
     const desbravadorId = query.desbravadorId ? Number(query.desbravadorId) : undefined;
-    const unidade = query.unidade ? Number(query.unidade) : undefined;
+    // prefer explicit unidade query param, otherwise use authenticated user's unidade
+    const unidade = query.unidade ? Number(query.unidade) : (req.user?.unidade ? Number(req.user.unidade) : undefined);
+
     return this.pointsService.listTransactions({ desbravadorId, sundayDate: query.sundayDate, unidade });
   }
   @Get('batch')
@@ -52,6 +64,15 @@ export class PointsController {
 
   @Patch('transaction/:id')
   editTransaction(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
+    // require sundayDate in payload to avoid creating transactions without a valid sunday
+    if (!body || !body.sundayDate) {
+      throw new BadRequestException('sundayDate é obrigatório ao editar transação');
+    }
+    // validate date parse
+    const d = new Date(body.sundayDate);
+    if (isNaN(d.getTime())) {
+      throw new BadRequestException('sundayDate inválido');
+    }
     return this.pointsService.editTransaction(id, body);
   }
 }

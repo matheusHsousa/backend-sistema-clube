@@ -47,7 +47,6 @@ export class FirebaseService {
       for (const keyPath of candidates) {
         try {
           if (!fs.existsSync(keyPath)) {
-            this.logger.debug(`serviceAccount não encontrado em: ${keyPath}`);
             continue;
           }
 

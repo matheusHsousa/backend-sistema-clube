@@ -78,7 +78,19 @@ export class PointsService {
         q = q.in('pointsId', pointIds);
       }
 
-      if (filter.sundayDate) q = q.eq('sundayDate', filter.sundayDate);
+      if (filter.sundayDate) {
+        // Normalize provided sundayDate to a UTC day range so timestamps with different times still match
+        try {
+          const d = new Date(filter.sundayDate);
+          if (!isNaN(d.getTime())) {
+            const start = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0));
+            const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+            q = q.gte('sundayDate', start.toISOString()).lt('sundayDate', end.toISOString());
+          }
+        } catch (e) {
+          // ignore and skip date filter if parsing fails
+        }
+      }
 
       const { data, error } = await q.order('sundayDate', { ascending: false });
       if (error) throw error;

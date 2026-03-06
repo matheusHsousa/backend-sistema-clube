@@ -17,6 +17,16 @@ export class StatsService {
     return sunday;
   }
 
+  // Retorna o último domingo já passado (se hoje for domingo, retorna hoje)
+  private getLastSunday(date: Date) {
+    const sunday = new Date(date);
+    const day = sunday.getDay();
+    // subtrai dias desde o último domingo
+    sunday.setDate(sunday.getDate() - day);
+    sunday.setHours(23, 59, 59, 999);
+    return sunday;
+  }
+
   private formatDateKey(date: Date) {
     const year = date.getFullYear();
     const month = `${date.getMonth() + 1}`.padStart(2, '0');
@@ -255,7 +265,7 @@ export class StatsService {
     }, {} as Record<string, number>);
 
     const now = new Date();
-    const lastSunday = this.getSundayEnd(now);
+    const lastSunday = this.getLastSunday(now);
     const sundayPoints: Date[] = [];
 
     const safeWeeks = Number.isFinite(weeks) && weeks > 0 ? Math.min(weeks, 104) : 12;
@@ -364,7 +374,7 @@ export class StatsService {
     }
 
     const now = new Date();
-    const lastSunday = this.getSundayEnd(now);
+    const lastSunday = this.getLastSunday(now);
     const sundayPoints: Date[] = [];
     const safeWeeks = Number.isFinite(weeks) && weeks > 0 ? Math.min(weeks, 104) : 12;
     for (let i = safeWeeks - 1; i >= 0; i--) {
@@ -426,7 +436,7 @@ export class StatsService {
     }
 
     const now = new Date();
-    const lastSunday = this.getSundayEnd(now);
+    const lastSunday = this.getLastSunday(now);
     const sundayPoints: Date[] = [];
 
     const safeWeeks = Number.isFinite(weeks) && weeks > 0 ? Math.min(weeks, 104) : 12;
@@ -482,21 +492,45 @@ export class StatsService {
     const desIds = (desbravadores || []).map((d: any) => d.id);
     const { data: transacoes } = await this.supabase.client.from('pointsTransaction').select('*, points(desbravadorId)').in('points.desbravadorId', desIds).order('reason', { ascending: true });
 
+    // Alguns rows podem não trazer a relação `points` populada; resolvemos também via pointsId
     const transacoesPorDesbravadorPorData = new Map<number, Set<string>>();
+
+    // coletar pointsIds que precisam de resolução
+    const missingPointsIds = new Set<number>();
+    for (const t of transacoes || []) {
+      if (!t.points?.desbravadorId && t.pointsId) missingPointsIds.add(Number(t.pointsId));
+    }
+
+    let pointsIdToDesbravador = new Map<number, number>();
+    if (missingPointsIds.size) {
+      const idsArr = Array.from(missingPointsIds);
+      const { data: pointsRows } = await this.supabase.client.from('points').select('id, desbravadorId').in('id', idsArr);
+      for (const p of pointsRows || []) pointsIdToDesbravador.set(Number(p.id), Number(p.desbravadorId));
+    }
+
+    const unresolvedTx: any[] = [];
     for (const transacao of transacoes || []) {
-      const desbravaId = transacao.points?.desbravadorId;
+      const desbravaId = transacao.points?.desbravadorId ?? (transacao.pointsId ? pointsIdToDesbravador.get(Number(transacao.pointsId)) : undefined);
       const dataExtraida = (transacao.sundayDate ? new Date(transacao.sundayDate) : null)
         || (transacao.reason ? this.extractDateFromReason(transacao.reason) : null)
         || new Date(transacao.created_at);
       const dataKey = this.formatDateKey(dataExtraida);
+      if (!desbravaId) {
+        unresolvedTx.push({ id: transacao.id, pointsId: transacao.pointsId, reason: transacao.reason, created_at: transacao.created_at });
+        continue; // se não conseguimos resolver, ignorar essa transação
+      }
       if (!transacoesPorDesbravadorPorData.has(desbravaId)) transacoesPorDesbravadorPorData.set(desbravaId, new Set());
       transacoesPorDesbravadorPorData.get(desbravaId)!.add(dataKey);
     }
 
+    if (unresolvedTx.length) {
+      this.logger.warn(`StatsService.conselheiroAusencias: ${unresolvedTx.length} transactions without resolved desbravador for unidade=${unidade}. Sample: ${JSON.stringify(unresolvedTx.slice(0,6))}`);
+    }
+
     const now = new Date();
-    const lastSunday = this.getSundayEnd(now);
+    const lastSunday = this.getLastSunday(now);
     
-    let inicioData = new Date(2026, 1, 22); // 22 de fevereiro de 2026
+    let inicioData = new Date(2026, 2, 1); // 1 de março de 2026
     if (startDate) {
       inicioData = new Date(startDate);
     }

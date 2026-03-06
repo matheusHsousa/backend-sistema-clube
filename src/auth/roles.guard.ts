@@ -29,15 +29,12 @@ export class RolesGuard implements CanActivate {
       const uInfo = user
         ? { firebaseUid: user.firebaseUid, email: user.email, roles: user.roles }
         : null;
-      this.logger.debug(`RolesGuard requiredRoles=${JSON.stringify(requiredRoles)} user=${JSON.stringify(uInfo)}`);
     } catch (e) {
-      this.logger.debug('RolesGuard - não foi possível serializar user para logging');
     }
 
     const hasRole = user?.roles?.some((r: string) => requiredRoles.includes(r));
 
     if (!hasRole) {
-      this.logger.warn('Acesso negado no RolesGuard - user.roles não contém requiredRoles');
       throw new ForbiddenException('Sem permissão');
     }
 
